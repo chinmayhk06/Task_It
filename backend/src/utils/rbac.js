@@ -17,7 +17,7 @@ const getTeamMembership = (team, actor) => {
   if (!team?.manager) return null;
   if (toId(team.manager) === id) return { role: ROLE.TEAM_LEAD, member: null };
   const member = (team.members || []).find((entry) => toId(entry.user) === id);
-  if (!member || ![ROLE.TEAM_LEAD, ROLE.MEMBER].includes(member.role)) return null;
+  if (!member || ![ROLE.TEAM_LEAD, ROLE.INTERN].includes(member.role)) return null;
   return { role: member.role, member };
 };
 // Assignment requires actual membership, even for an Admin.
@@ -64,7 +64,7 @@ const requireTaskAccess = async (taskId, userId, allowedRoles = []) => {
   if (!task) throw forbidden("Task not found", 404);
   if (!task.project) throw forbidden("Task must be linked to a project; migrate legacy data", 409);
   const access = await requireProjectAccess(task.project._id, userId, allowedRoles);
-  if (access.role === ROLE.MEMBER && toId(task.assignee) !== toId(userId)) throw forbidden("Members can only access their assigned tasks");
+  if (access.role === ROLE.INTERN && toId(task.assignee) !== toId(userId)) throw forbidden("Interns can only access their assigned tasks");
   return { task, ...access };
 };
 const getAccessibleTeamIds = async (userId) => (await Team.find(teamQuery(await getActor(userId))).select("_id")).map((t) => t._id);
@@ -78,7 +78,7 @@ const getAccessibleProjectsByRole = async (userId) => {
   projects.forEach((project) => {
     const role = getTeamMembership(project.team, actor)?.role;
     if (MANAGERS.includes(role)) managerProjectIds.push(project._id);
-    else if (role === ROLE.MEMBER) memberProjectIds.push(project._id);
+    else if (role === ROLE.INTERN) memberProjectIds.push(project._id);
   });
   return { managerProjectIds, memberProjectIds };
 };

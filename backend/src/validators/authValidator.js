@@ -2,7 +2,7 @@ const { body } = require("express-validator");
 
 const SELF_REGISTRATION_ROLES = [
     "Team Lead",
-    "Member",
+    "Intern",
 ];
 
 const registerValidator = [

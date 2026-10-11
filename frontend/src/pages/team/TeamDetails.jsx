@@ -34,7 +34,7 @@ export default function TeamDetails() {
 
     const [team, setTeam] = useState(null);
     const [email, setEmail] = useState("");
-    const [inviteRole, setInviteRole] = useState("Member");
+    const [inviteRole, setInviteRole] = useState("Intern");
     const [invitations, setInvitations] = useState([]);
     const [managerCandidates, setManagerCandidates] = useState([]);
     const [newManager, setNewManager] = useState("");
@@ -114,7 +114,7 @@ export default function TeamDetails() {
     };
 
     const handleTransfer = async () => {
-        if (!newManager || !confirm("Reassign the team manager? The previous manager will become a Member.")) return;
+        if (!newManager || !confirm("Reassign the team manager? The previous manager will become an Intern.")) return;
         setActionLoading(true); setError("");
         try { await reassignManager(id, newManager); setNewManager(""); await fetchTeam(); setSuccess("Manager reassigned."); }
         catch (err) { setError(err.response?.data?.message || "Unable to reassign manager."); }
@@ -320,7 +320,7 @@ export default function TeamDetails() {
                                                     disabled={actionLoading}
                                                     className="rounded-md border border-[var(--border-color)] bg-[var(--surface-card)] px-3 py-1 text-sm outline-none focus:border-[var(--title-color)]"
                                                 >
-                                                    <option value="Member">Member</option>
+                                                    <option value="Intern">Intern</option>
                                                     <option value="Team Lead">Team Lead</option>
                                                 </select>
                                             ) : (
@@ -420,7 +420,7 @@ export default function TeamDetails() {
 
                                     <label className="block">Team role
                                         <select value={inviteRole} onChange={(e) => setInviteRole(e.target.value)} className="ml-2 rounded-md border border-[var(--border-color)] bg-[var(--surface-card)] p-2">
-                                            <option value="Member">Member</option><option value="Team Lead">Team Lead</option>
+                                            <option value="Intern">Intern</option><option value="Team Lead">Team Lead</option>
                                         </select>
                                     </label>
                                     <div className="flex gap-2">

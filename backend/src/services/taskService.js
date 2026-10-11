@@ -10,7 +10,7 @@ const {
 } = require('../utils/rbac');
 
 const TASK_MANAGERS = [ROLE.ADMIN, ROLE.TEAM_LEAD];
-const MEMBER_SAFE_FIELDS = new Set(['status', 'progress']);
+const INTERN_SAFE_FIELDS = new Set(['status', 'progress']);
 const TASK_FIELDS = new Set(['title', 'description', 'priority', 'status', 'progress', 'deadline', 'project', 'assignee']);
 
 const forbidden = (message) => {
@@ -68,7 +68,7 @@ const getTasks = async (userId, filters = {}) => {
   if (filters.project) {
     const { role } = await requireProjectAccess(filters.project, userId);
     query.project = filters.project;
-    if (role === ROLE.MEMBER) {
+    if (role === ROLE.INTERN) {
       query.assignee = userId;
     } else if (TASK_MANAGERS.includes(role)) {
       canFilterAnyAssignee = true;
@@ -123,14 +123,14 @@ const getTaskById = async (taskId, userId) => {
   };
 };
 
-const assertMemberSafeUpdate = (task, userId, updateData) => {
+const assertInternSafeUpdate = (task, userId, updateData) => {
   if (toId(task.assignee) !== toId(userId)) {
-    throw forbidden('Members can only update tasks assigned to them');
+    throw forbidden('Interns can only update tasks assigned to them');
   }
 
-  const unsafeFields = Object.keys(updateData).filter((field) => !MEMBER_SAFE_FIELDS.has(field));
+  const unsafeFields = Object.keys(updateData).filter((field) => !INTERN_SAFE_FIELDS.has(field));
   if (unsafeFields.length > 0) {
-    throw forbidden('Members can only update safe task fields');
+    throw forbidden('Interns can only update safe task fields');
   }
 };
 
@@ -143,8 +143,8 @@ const updateTask = async (taskId, userId, updateData) => {
   delete data.assignedTo;
   if (data.deadline === '') data.deadline = undefined;
 
-  if (role === ROLE.MEMBER) {
-    assertMemberSafeUpdate(task, userId, data);
+  if (role === ROLE.INTERN) {
+    assertInternSafeUpdate(task, userId, data);
   } else if (!TASK_MANAGERS.includes(role)) {
     throw forbidden('Insufficient task permissions');
   }
@@ -184,8 +184,8 @@ const addSubtask = async (taskId, userId, subtaskTitle) => {
 
 const toggleSubtask = async (taskId, userId, subtaskId, isCompleted) => {
   const { task, role } = await requireTaskAccess(taskId, userId);
-  if (role === ROLE.MEMBER && toId(task.assignee) !== toId(userId)) {
-    throw forbidden('Members can only update their own assigned task');
+  if (role === ROLE.INTERN && toId(task.assignee) !== toId(userId)) {
+    throw forbidden('Interns can only update their own assigned task');
   }
 
   const subtask = task.subtasks.id(subtaskId);

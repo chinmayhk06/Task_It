@@ -18,7 +18,7 @@ function Register() {
     email: "",
     password: "",
     confirmPassword: "",
-    role: "Member",
+    role: "Intern",
     jobTitle: "",
   });
 
@@ -228,7 +228,7 @@ function Register() {
                 onChange={handleChange}
                 className="h-11 w-full rounded-md border border-[var(--border-color)] bg-[var(--surface-card)] px-3 text-sm text-[var(--title-color)] outline-none transition focus:border-[var(--title-color)]"
               >
-                <option value="Member">Member</option>
+                <option value="Intern">Intern</option>
                 <option value="Team Lead">Team Lead</option>
               </select>
               {errors.role && (

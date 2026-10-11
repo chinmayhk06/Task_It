@@ -174,7 +174,7 @@ const getTeamReport = async (req, res) => {
 };
 
 // ═══════════════════════════════════════════════════════════════════════════
-// 3. INTERN / MEMBER REPORT
+// 3. INTERN / INTERN REPORT
 // ═══════════════════════════════════════════════════════════════════════════
 const getInternReport = async (req, res) => {
     try {
@@ -183,7 +183,7 @@ const getInternReport = async (req, res) => {
 
         if (exportType === 'excel') {
             const wb = new ExcelJS.Workbook();
-            const ws = wb.addWorksheet('Member Report');
+            const ws = wb.addWorksheet('Team participant report');
             ws.columns = [
                 { header: 'Name', key: 'name', width: 22 },
                 { header: 'Email', key: 'email', width: 28 },
@@ -197,13 +197,13 @@ const getInternReport = async (req, res) => {
             ];
             styleHeader(ws.getRow(1));
             data.forEach((r) => ws.addRow(r));
-            return await sendExcel(res, wb, 'Member_Report');
+            return await sendExcel(res, wb, 'Team_Participant_Report');
         }
 
         if (exportType === 'pdf') {
             const headers = ['Name', 'Role', 'Total', 'Done', 'In Progress', 'Pending', 'Overdue', 'Rate'];
             const rows = data.map((r) => [r.name, r.role, r.totalTasks, r.completed, r.inProgress, r.pending, r.overdue, r.completionRate]);
-            return sendPDF(res, 'Member Report', headers, rows, 'Member_Report');
+            return sendPDF(res, 'Team participant report', headers, rows, 'Team_Participant_Report');
         }
 
         res.json({ success: true, count: data.length, data });

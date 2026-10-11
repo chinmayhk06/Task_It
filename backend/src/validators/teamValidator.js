@@ -33,7 +33,7 @@ const updateTeamValidator = [
 
 // Invite Member Validator
 const inviteMemberValidator = [
-    body("role").optional().isIn(["Team Lead", "Member"]).withMessage("Role must be Team Lead or Member"),
+    body("role").optional().isIn(["Team Lead", "Intern"]).withMessage("Role must be Team Lead or Intern"),
     body("email")
         .trim()
         .notEmpty()

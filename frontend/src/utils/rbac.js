@@ -1,7 +1,7 @@
 export const TEAM_ROLES = {
   ADMIN: "Admin",
   TEAM_LEAD: "Team Lead",
-  MEMBER: "Member",
+  INTERN: "Intern",
 };
 
 export const normalizeRole = role => Object.values(TEAM_ROLES).includes(role) ? role : null;

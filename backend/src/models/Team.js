@@ -12,7 +12,7 @@ const memberSchema = new mongoose.Schema(
     role: {
       type: String,
       enum: TEAM_ROLES,
-      default: ROLE.MEMBER,
+      default: ROLE.INTERN,
     },
   },
   {

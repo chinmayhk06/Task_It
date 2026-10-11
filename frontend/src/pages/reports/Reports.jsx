@@ -65,7 +65,7 @@ const REPORTS = [
     },
     {
         key: "interns",
-        label: "Member Report",
+        label: "Team participant report",
         description: "Per-member task breakdown: completion rates, overdue counts, workload.",
         icon: FiUser,
         fetch: getMemberReport,

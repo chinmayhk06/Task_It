@@ -31,7 +31,7 @@ export const deleteTeam = async (id) => {
 };
 
 // Invite member
-export const inviteMember = async (id, email, role = "Member") => {
+export const inviteMember = async (id, email, role = "Intern") => {
     const response = await api.post(`/team/${id}/invite`, {
         email,
         role,

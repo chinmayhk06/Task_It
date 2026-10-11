@@ -48,7 +48,7 @@ const removeMember = async (id, userId, targetId) => {
   await createNotification(targetId, "team_removed", `You were removed from the team "${team.teamName}".`, team._id, { email: false });
 };
 const updateMemberRole = async (id, userId, targetId, role) => {
-  if (!TEAM_ROLES.includes(role)) fail("Role must be Team Lead or Member");
+  if (!TEAM_ROLES.includes(role)) fail("Role must be Team Lead or Intern");
   const { team } = await requireTeamAccess(id, userId, MANAGERS);
   if (toId(team.manager) === targetId && role !== ROLE.TEAM_LEAD) fail("Ask an Admin to reassign the designated manager first", 409);
   const member = team.members.find((m) => toId(m.user) === targetId);
@@ -71,9 +71,9 @@ const reassignManager = async (id, userId, targetId) => withRbacWrite(async (ses
   if (!target || !target.isActive) fail("Choose an active Team Lead", 400);
   const member = team.members.find((m) => toId(m.user) === toId(targetId));
   if (!MANAGERS.includes(target.role) && member?.role !== ROLE.TEAM_LEAD) fail("Choose an account or team Team Lead", 400);
-  // Former manager keeps team access as a Member, avoiding implicit retained management.
+  // Former manager keeps team access as an Intern, avoiding implicit retained management.
   const previous = team.members.find((m) => toId(m.user) === toId(team.manager));
-  if (previous && toId(team.manager) !== toId(targetId)) previous.role = ROLE.MEMBER;
+  if (previous && toId(team.manager) !== toId(targetId)) previous.role = ROLE.INTERN;
   if (member) member.role = ROLE.TEAM_LEAD;
   else team.members.push({ user: target._id, role: ROLE.TEAM_LEAD });
   team.manager = target._id; await team.save({ session }); return populate(team);

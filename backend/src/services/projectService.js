@@ -108,7 +108,7 @@ const getProjectById = async (projectId, userId) => {
       populate: { path: 'members.user', select: 'fullName email role' },
     });
   const taskQuery = { project: project._id };
-  if (role === ROLE.MEMBER) {
+  if (role === ROLE.INTERN) {
     taskQuery.assignee = userId;
   }
 

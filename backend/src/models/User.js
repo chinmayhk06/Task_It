@@ -36,7 +36,7 @@ const userSchema = new mongoose.Schema(
     role: {
       type: String,
       enum: ACCOUNT_ROLES,
-      default: ROLE.MEMBER,
+      default: ROLE.INTERN,
     },
     jobTitle: { type: String, trim: true, maxlength: 100, default: "" },
 

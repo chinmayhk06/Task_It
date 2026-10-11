@@ -7,7 +7,7 @@ import {
     getUsers, createUser, updateUser, deleteUser, assignRole, toggleActivate
 } from "../../services/userService";
 
-const ROLES = ["Admin", "Team Lead", "Member"];
+const ROLES = ["Admin", "Team Lead", "Intern"];
 
 const ROLE_COLORS = Object.fromEntries(ROLES.map(role => [role, "bg-[var(--hover-bg)] text-[var(--title-color)]"]));
 
@@ -22,7 +22,7 @@ function UserModal({ user, onClose, onSave }) {
         fullName: user?.fullName || "",
         email: user?.email || "",
         password: "",
-        role: user?.role || "Member",
+        role: user?.role || "Intern",
         department: user?.department || "",
         phone: user?.phone || "",
         jobTitle: user?.jobTitle || "",

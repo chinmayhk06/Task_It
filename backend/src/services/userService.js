@@ -13,11 +13,11 @@ const mutateUser = (actorId, userId, action, data = {}) => withRbacWrite(async (
   const user = await User.findById(userId).session(session);
   if (!user) fail("User not found", 404);
   const nextRole = data.role ?? user.role;
-  if (!ACCOUNT_ROLES.includes(nextRole)) fail("Role must be Admin, Team Lead or Member");
+  if (!ACCOUNT_ROLES.includes(nextRole)) fail("Role must be Admin, Team Lead or Intern");
   const losingAccess = action === "delete" || (action === "toggle" && user.isActive) || (user.role === ROLE.ADMIN && nextRole !== ROLE.ADMIN);
   if (losingAccess && String(actorId) === String(userId)) fail("Cannot remove your own administrative access", 409);
   if (losingAccess && user.role === ROLE.ADMIN && user.isActive && await User.countDocuments({ role: ROLE.ADMIN, isActive: true }).session(session) <= 1) fail("The last active Admin must be retained", 409);
-  if ((action === "delete" || (action === "toggle" && user.isActive) || nextRole === ROLE.MEMBER) && await Team.exists({ manager: user._id }).session(session)) fail("Reassign this user's managed teams first", 409);
+  if ((action === "delete" || (action === "toggle" && user.isActive) || nextRole === ROLE.INTERN) && await Team.exists({ manager: user._id }).session(session)) fail("Reassign this user's managed teams first", 409);
   if (action === "delete") {
     // Do not leave dangling membership, assignment, creator, or document references.
     const linked = await Team.exists({ "members.user": user._id }).session(session);
@@ -39,7 +39,7 @@ const mutateUser = (actorId, userId, action, data = {}) => withRbacWrite(async (
   const result = user.toObject(); delete result.password; return result;
 });
 const createUser = async (actorId, data) => {
-  const { fullName, email, password, role = ROLE.MEMBER, jobTitle = "", department = "", phone = "" } = data;
+  const { fullName, email, password, role = ROLE.INTERN, jobTitle = "", department = "", phone = "" } = data;
   if (!fullName || typeof email !== "string" || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || typeof password !== "string" || password.length < 8 || !ACCOUNT_ROLES.includes(role)) fail("Valid name, email, role and password (8+ characters) are required");
   const hashed = await bcrypt.hash(password, 12);
   return withRbacWrite(async (session) => {

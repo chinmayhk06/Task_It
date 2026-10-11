@@ -215,7 +215,7 @@ export default function TaskFormModal({ isOpen, onClose, onSubmit, task, project
                                 <option value="">Unassigned</option>
                                 {assigneeOptions.map((u) => (
                                     <option key={u._id} value={u._id}>
-                                        {u.fullName || u.email} ({u.role || "Member"})
+                                        {u.fullName || u.email} ({u.role || "Intern"})
                                     </option>
                                 ))}
                             </select>

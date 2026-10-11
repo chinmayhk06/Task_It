@@ -62,7 +62,7 @@ const getTeamReport = async (userId) => {
     }));
 };
 
-// 3. Intern / Member Report
+// 3. Intern / Team participant report
 const getInternReport = async (userId) => {
     const teamIds = await getManagedTeamIds(userId);
     if (!(await getAccountCapabilities(await getActor(userId))).canViewReports) {

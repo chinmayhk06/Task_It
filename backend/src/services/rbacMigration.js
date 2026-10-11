@@ -5,10 +5,10 @@ const mapAccountRole = (role) => {
   if (ACCOUNT_ROLES.includes(role)) return role;
   if (role === "Super Admin") return ROLE.ADMIN;
   if (["Project Manager", "Owner", "TeamLead"].includes(role)) return ROLE.TEAM_LEAD;
-  if (jobRoles.includes(role)) return ROLE.MEMBER;
+  if (role === "Member" || jobRoles.includes(role)) return ROLE.INTERN;
   return null;
 };
-const mapTeamRole = (role) => ["Owner", "TeamLead", ROLE.TEAM_LEAD].includes(role) ? ROLE.TEAM_LEAD : ["Intern", ROLE.MEMBER].includes(role) ? ROLE.MEMBER : null;
+const mapTeamRole = (role) => ["Owner", "TeamLead", ROLE.TEAM_LEAD].includes(role) ? ROLE.TEAM_LEAD : ["Member", ROLE.INTERN].includes(role) ? ROLE.INTERN : null;
 const planMigration = ({ users, teams, projects = [], tasks = [], documents = [] }) => {
   const errors = [], userUpdates = [], teamUpdates = [];
   const userMap = new Map(users.map((u) => [id(u._id), u]));
@@ -21,16 +21,20 @@ const planMigration = ({ users, teams, projects = [], tasks = [], documents = []
     if (role !== user.role || user.jobTitle === undefined) userUpdates.push({ _id: user._id, role, jobTitle });
   }
   for (const team of teams) {
+    if (team.manager && team.owner && id(team.manager) !== id(team.owner)) { errors.push(`Team ${team._id} has conflicting manager and legacy owner references; resolve explicitly`); continue; }
     const manager = team.manager || team.owner;
-    if (!manager || !userMap.has(id(manager)) || userMap.get(id(manager)).isActive === false) { errors.push(`Team ${team._id} needs an active designated manager`); continue; }
-    const members = (team.members || []).map((m) => ({ user: m.user, role: mapTeamRole(m.role) }));
+    if (!manager || !userMap.has(id(manager)) || userMap.get(id(manager)).isActive === false) { errors.push(`Team ${team._id} needs an active designated manager (${!manager ? 'missing reference' : !userMap.has(id(manager)) ? `missing user ${manager}` : `inactive user ${manager}`})`); continue; }
+    const members = (team.members || []).map((m) => ({ ...m, role: mapTeamRole(m.role) }));
     if (members.some((m) => !m.role || !userMap.has(id(m.user))) || new Set(members.map((m) => id(m.user))).size !== members.length) {
-      errors.push(`Team ${team._id} has unknown roles, missing users, or duplicate members`); continue;
+      const unknownRoles = (team.members || []).filter(m => !mapTeamRole(m.role)).map(m => String(m.role));
+      const missingUsers = members.filter(m => !userMap.has(id(m.user))).map(m => id(m.user));
+      const duplicateUsers = members.filter((m,n) => members.findIndex(other => id(other.user) === id(m.user)) !== n).map(m => id(m.user));
+      errors.push(`Team ${team._id} has unknown roles, missing users, or duplicate members (${JSON.stringify({unknownRoles,missingUsers,duplicateUsers})})`); continue;
     }
     const designated = members.find((m) => id(m.user) === id(manager));
     if (designated) designated.role = ROLE.TEAM_LEAD;
     else members.push({ user: manager, role: ROLE.TEAM_LEAD });
-    const invitations = (team.invitations || []).map((i) => ({ ...i, role: mapTeamRole(i.role) }));
+    const invitations = (team.invitations || []).map((i) => ({ ...i, role: ["TeamLead", ROLE.TEAM_LEAD].includes(i.role) ? ROLE.TEAM_LEAD : ["Member", ROLE.INTERN].includes(i.role) ? ROLE.INTERN : null }));
     if (invitations.some((i) => !TEAM_ROLES.includes(i.role))) { errors.push(`Team ${team._id} contains an invalid invitation role`); continue; }
     const changed = Boolean(team.owner) || !team.manager || members.length !== (team.members || []).length || members.some((m, n) => m.role !== team.members[n]?.role) || invitations.some((i, n) => i.role !== team.invitations[n]?.role);
     if (changed) teamUpdates.push({ _id: team._id, manager, members, invitations });

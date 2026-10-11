@@ -31,9 +31,9 @@ const deliver = async (email, teamName, role, token) => {
     await sendEmail({ to: email, required: true, ...message });
   } catch { fail("Invitation saved, but email delivery failed. Please resend it.", 503); }
 };
-const invite = async (teamId, userId, email, role = ROLE.MEMBER) => {
+const invite = async (teamId, userId, email, role = ROLE.INTERN) => {
   email = normalizeEmail(email);
-  if (![ROLE.TEAM_LEAD, ROLE.MEMBER].includes(role)) fail("Role must be Team Lead or Member");
+  if (![ROLE.TEAM_LEAD, ROLE.INTERN].includes(role)) fail("Role must be Team Lead or Intern");
   const { team, actor } = await requireTeamAccess(teamId, userId, managers);
   const user = await User.findOne({ email });
   if (user && (toId(team.manager) === toId(user._id) || team.members.some((m) => toId(m.user) === toId(user._id)))) fail("User is already a member", 409);

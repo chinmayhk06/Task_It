@@ -31,7 +31,7 @@ const request = async (path, user, method = "GET", body) => {
   }, ...(body ? { body: JSON.stringify(body) } : {}) });
   return { status: response.status, ...(await response.json()) };
 };
-const invite = async (email = "new@example.com", role = "Member", manager = lead) => {
+const invite = async (email = "new@example.com", role = "Intern", manager = lead) => {
   const result = await request(`/team/${team.id}/invite`, manager, "POST", { email, role });
   assert.equal(result.status, 200, JSON.stringify(result));
   return { invitation: result.data, token: sent.at(-1).text.match(/\/invitations\/([a-f0-9]{64})/)[1] };
@@ -64,7 +64,7 @@ beforeEach(async () => {
   sent.length = 0; deliveryFails = false;
   owner = await makeUser("owner@example.com", { role: "Team Lead" }); lead = await makeUser("lead@example.com", { role: "Team Lead" }); intern = await makeUser("intern@example.com");
   team = await Team.create({ teamName: "Test Team", manager: owner._id, members: [
-    { user: owner._id, role: "Team Lead" }, { user: lead._id, role: "Team Lead" }, { user: intern._id, role: "Member" },
+    { user: owner._id, role: "Team Lead" }, { user: lead._id, role: "Team Lead" }, { user: intern._id, role: "Intern" },
   ] });
 });
 
@@ -88,14 +88,14 @@ test("duplicate concurrent invitations produce only one pending record", async (
 });
 test("acceptance is atomic, concurrent and idempotent, without changing global role", async () => {
   const { token } = await invite("new@example.com", "Team Lead");
-  const user = await makeUser("new@example.com", { role: "Member" });
+  const user = await makeUser("new@example.com", { role: "Intern" });
   const results = await Promise.all(Array.from({ length: 8 }, () => request("/team/invitations/accept", user, "POST", { token })));
   assert.ok(results.every((r) => r.status === 200), JSON.stringify(results));
   const saved = await Team.findById(team.id).select("+invitations");
   assert.equal(saved.members.filter((m) => m.user.equals(user._id)).length, 1);
   assert.equal(saved.members.find((m) => m.user.equals(user._id)).role, "Team Lead");
   assert.equal(saved.invitations[0].status, "accepted");
-  assert.equal((await User.findById(user._id)).role, "Member");
+  assert.equal((await User.findById(user._id)).role, "Intern");
   await Team.updateOne({ _id: team.id }, { $pull: { members: { user: user._id } } });
   assert.equal((await request("/team/invitations/accept", user, "POST", { token })).status, 200);
   assert.equal((await Team.findById(team.id)).members.some((m) => m.user.equals(user._id)), false);
@@ -148,7 +148,7 @@ test("SMTP failure is reported and leaves a manageable pending invitation", asyn
   assert.equal((await request(`/team/${team.id}/invite`, lead, "POST", { email: "new@example.com" })).status, 503);
   assert.equal((await request(`/team/${team.id}/invitations`, lead)).data.length, 1);
 });
-test("Members and unrelated Team Leads cannot manage invitations", async () => {
+test("Interns and unrelated Team Leads cannot manage invitations", async () => {
   const { invitation } = await invite();
   const admin = await makeUser("outsider@example.com", { role: "Team Lead" });
   for (const user of [intern, admin]) {
@@ -163,7 +163,7 @@ test("TeamLead manages details and member roles but cannot alter Owner or owners
   assert.equal((await request(`/team/${team.id}/member/${intern.id}/role`, lead, "PATCH", { role: "Team Lead" })).status, 200);
   for (const [path, method, body, expected] of [
     [`/member/${owner.id}`, "DELETE", undefined, 409],
-    [`/member/${owner.id}/role`, "PATCH", { role: "Member" }, 409],
+    [`/member/${owner.id}/role`, "PATCH", { role: "Intern" }, 409],
     [`/member/${lead.id}/role`, "PATCH", { role: "Owner" }, 400],
     ["/manager", "POST", { userId: lead.id }, 403],
     ["/invite", "POST", { email: "other@example.com", role: "Owner" }, 400],
@@ -176,10 +176,10 @@ test("only Admin reassigns the manager, retaining one designated manager", async
   assert.equal((await request(`/team/${team.id}/manager`, admin, "POST", { userId: lead.id })).status, 200);
   const saved = await Team.findById(team.id);
   assert.equal(String(saved.manager), lead.id);
-  assert.equal(saved.members.find(m => m.user.equals(owner._id)).role, "Member");
+  assert.equal(saved.members.find(m => m.user.equals(owner._id)).role, "Intern");
   assert.equal(saved.members.find(m => m.user.equals(lead._id)).role, "Team Lead");
 });
-test("Team Lead creates a team and becomes manager; Member cannot create", async () => {
+test("Team Lead creates a team and becomes manager; Intern cannot create", async () => {
   assert.equal((await request("/team", intern, "POST", { teamName: "Forbidden Team" })).status, 403);
   const result = await request("/team", lead, "POST", { teamName: "Lead Team" });
   assert.equal(result.status, 201); assert.equal(result.data.manager, lead.id);
@@ -199,7 +199,7 @@ test("TeamLead creates, edits, assigns, deletes tasks and projects; Intern stays
   await projectService.deleteProject(project.id, lead._id);
 });
 test("password registration/login and verified Google login keep authentication working", async () => {
-  assert.equal((await request("/auth/register", null, "POST", { fullName: "New User", email: "password@example.com", password: "Password123!", role: "Member" })).status, 201);
+  assert.equal((await request("/auth/register", null, "POST", { fullName: "New User", email: "password@example.com", password: "Password123!", role: "Intern" })).status, 201);
   const login = await request("/auth/login", null, "POST", { email: "password@example.com", password: "Password123!" });
   assert.equal(login.status, 200); assert.ok(login.token);
   assert.equal((await User.findOne({ email: "password@example.com" })).verifiedEmail, "");
@@ -247,7 +247,7 @@ test("TeamLead can link repositories and access team reports/dashboard", async (
   assert.equal((await request("/dashboard/stats", lead)).status, 200);
 });
 
-test("Admin has all-team oversight; unrelated Team Leads and Members remain isolated", async () => {
+test("Admin has all-team oversight; unrelated Team Leads and Interns remain isolated", async () => {
   const admin = await makeUser("admin@example.com", { role: "Admin" });
   const outsider = await makeUser("outsider@example.com", { role: "Team Lead" });
   const project = await projectService.createProject({ projectName: "Private", description: "Private project", team: team.id }, lead.id);
@@ -274,7 +274,7 @@ test("Admin has all-team oversight; unrelated Team Leads and Members remain isol
   assert.equal((await request(`/team/${team.id}`, lead, "DELETE")).status, 200);
 });
 
-test("Member writes are limited to own task status and progress, including mixed update rejection", async () => {
+test("Intern writes are limited to own task status and progress, including mixed update rejection", async () => {
   const project = await projectService.createProject({ projectName: "Work", description: "Work", team: team.id }, lead.id);
   const task = await taskService.createTask({ title: "Work", project: project.id, assignee: intern.id }, lead.id);
   await taskService.updateTask(task.id, intern.id, { status: "In Progress", progress: 45 });
@@ -288,14 +288,14 @@ test("Member writes are limited to own task status and progress, including mixed
   assert.equal((await request(`/team/${team.id}/member/${intern.id}`, lead, "DELETE")).status,409);
 });
 
-test("account Team Lead does not override Member membership; invitations never grant Admin", async () => {
-  team.members.find(m=>m.user.equals(lead._id)).role="Member"; await team.save();
+test("account Team Lead does not override Intern membership; invitations never grant Admin", async () => {
+  team.members.find(m=>m.user.equals(lead._id)).role="Intern"; await team.save();
   assert.equal((await request(`/team/${team.id}`, lead, "PUT", {teamName:"Denied"})).status,403);
   assert.equal((await request(`/team/${team.id}/invite`, owner, "POST", {email:"new@example.com",role:"Admin"})).status,400);
   const {token}=await invite("new@example.com","Team Lead",owner);
   const user=await makeUser("new@example.com");
   assert.equal((await request("/team/invitations/accept",user,"POST",{token})).status,200);
-  assert.equal((await User.findById(user.id)).role,"Member");
+  assert.equal((await User.findById(user.id)).role,"Intern");
   assert.equal((await request(`/team/${team.id}`,user,"PUT",{teamName:"Scoped Lead"})).status,200);
   assert.equal((await request("/auth/profile",user)).user.capabilities.canCreateTeams,true);
   assert.equal((await request("/users",user)).status,403);
@@ -304,20 +304,20 @@ test("account Team Lead does not override Member membership; invitations never g
 test("only protected Admin operations grant Admin; public registration, Google and settings cannot", async () => {
   assert.equal((await request("/auth/register",null,"POST",{fullName:"Unsafe",email:"unsafe@example.com",password:"Password123!",role:"Admin"})).status,400);
   const google=await request("/auth/google",null,"POST",{idToken:"test",role:"Admin"});
-  assert.equal(google.status,200); assert.equal((await User.findOne({email:"google@example.com"})).role,"Member");
+  assert.equal(google.status,200); assert.equal((await User.findOne({email:"google@example.com"})).role,"Intern");
   assert.equal((await request("/settings/profile",intern,"PUT",{role:"Admin",jobTitle:"Admin"})).status,200);
-  assert.equal((await User.findById(intern.id)).role,"Member");
+  assert.equal((await User.findById(intern.id)).role,"Intern");
   const admin=await makeUser("admin@example.com",{role:"Admin"});
   assert.equal((await request(`/users/${intern.id}/role`,lead,"PUT",{role:"Admin"})).status,403);
   assert.equal((await request(`/users/${intern.id}/role`,admin,"PUT",{role:"Admin"})).status,200);
   assert.equal((await request("/users",intern)).status,200);
-  assert.equal((await request(`/users/${admin.id}/role`,admin,"PUT",{role:"Member"})).status,409);
+  assert.equal((await request(`/users/${admin.id}/role`,admin,"PUT",{role:"Intern"})).status,409);
   assert.equal((await request(`/users/${owner.id}/deactivate`,admin,"PUT")).status,409);
   const created=await request("/users",admin,"POST",{fullName:"New Admin",email:"newadmin@example.com",password:"Password123!",role:"Admin"});
   assert.equal(created.status,201,JSON.stringify(created)); assert.equal(created.data.password,undefined);
 });
 
-test("Admin can appoint an external Team Lead but cannot appoint an inactive or unqualified Member", async () => {
+test("Admin can appoint an external Team Lead but cannot appoint an inactive or unqualified Intern", async () => {
   const admin=await makeUser("admin@example.com",{role:"Admin"});
   const external=await makeUser("external@example.com",{role:"Team Lead"});
   assert.equal((await request(`/team/${team.id}/manager`,admin,"POST",{userId:intern.id})).status,400);
@@ -377,7 +377,7 @@ test("explicit migration CLI is dry-run by default, requires confirmation and ba
     await assert.rejects(fs.access(backup));
     const args=['--apply','--confirm-database',mongoose.connection.name,'--backup',backup];
     assert.match((await run(args)).stdout,/committed/);
-    const saved=await User.findById(legacyId); assert.equal(saved.role,'Member'); assert.equal(saved.jobTitle,'Developer');
+    const saved=await User.findById(legacyId); assert.equal(saved.role,'Intern'); assert.equal(saved.jobTitle,'Developer');
     assert.match(await fs.readFile(backup,'utf8'),/Developer/);
     await assertCurrentRbac(mongoose.connection.db);
     await assert.rejects(run(args)); // Never overwrite an existing backup.
@@ -386,7 +386,7 @@ test("explicit migration CLI is dry-run by default, requires confirmation and ba
 
 test("concurrent Admin demotions cannot remove all active administrators", async () => {
   const a=await makeUser("a@example.com",{role:"Admin"}), b=await makeUser("b@example.com",{role:"Admin"});
-  const results=await Promise.all([request(`/users/${b.id}/role`,a,"PUT",{role:"Member"}),request(`/users/${a.id}/role`,b,"PUT",{role:"Member"})]);
+  const results=await Promise.all([request(`/users/${b.id}/role`,a,"PUT",{role:"Intern"}),request(`/users/${a.id}/role`,b,"PUT",{role:"Intern"})]);
   assert.equal(results.filter(r=>r.status===200).length,1);
   assert.equal(await User.countDocuments({role:"Admin",isActive:true}),1);
 });
@@ -400,4 +400,18 @@ test("moving work validates destination access and retained assignees", async ()
   await assert.rejects(projectService.updateProject(firstProject.id,lead.id,{team:second.id}),{statusCode:409});
   await taskService.updateTask(task.id,lead.id,{project:secondProject.id,assignee:lead.id});
   assert.equal(String((await Task.findById(task.id)).project),secondProject.id);
+});
+
+test("only new canonical roles are accepted; Intern invitation keeps the account role unchanged", async () => {
+  const { ACCOUNT_ROLES, TEAM_ROLES } = require('../src/utils/roles');
+  assert.deepEqual(ACCOUNT_ROLES,['Admin','Team Lead','Intern']);
+  assert.deepEqual(TEAM_ROLES,['Team Lead','Intern']);
+  assert.equal((await request('/auth/register',null,'POST',{fullName:'Legacy role',email:'legacy-role@example.com',password:'Password123!',role:'Member'})).status,400);
+  assert.equal((await request(`/team/${team.id}/invite`,lead,'POST',{email:'other@example.com',role:'Member'})).status,400);
+  const {token}=await invite('scoped@example.com','Intern');
+  const user=await makeUser('scoped@example.com',{role:'Team Lead'});
+  assert.equal((await request('/team/invitations/accept',user,'POST',{token})).status,200);
+  assert.equal((await User.findById(user.id)).role,'Team Lead');
+  assert.equal((await Team.findById(team.id)).members.find(m=>m.user.equals(user._id)).role,'Intern');
+  assert.equal((await request(`/team/${team.id}`,user,'PUT',{teamName:'Not allowed'})).status,403);
 });
