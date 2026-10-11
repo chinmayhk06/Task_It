@@ -32,7 +32,7 @@ const uploadDocument = async (req, res) => {
       return res.status(400).json({ success: false, message: 'project is required' });
     }
 
-    await requireProjectAccess(project, req.user._id, [ROLE.OWNER, ROLE.TEAM_LEAD]);
+    await requireProjectAccess(project, req.user._id, [ROLE.ADMIN, ROLE.TEAM_LEAD]);
 
     let fileUrl = '';
     let publicId = '';
@@ -81,7 +81,7 @@ const uploadDocument = async (req, res) => {
     await document.populate({
       path: 'project',
       select: 'projectName team owner',
-      populate: { path: 'team', select: 'teamName owner members' },
+      populate: { path: 'team', select: 'teamName manager members' },
     });
 
     res.status(201).json({ success: true, message: 'Document uploaded successfully', data: document });
@@ -102,7 +102,6 @@ const getDocuments = async (req, res) => {
     const projectIds = await getAccessibleProjectIds(req.user._id);
     filter.$or = [
       { project: { $in: projectIds } },
-      { uploadedBy: req.user._id, project: { $exists: false } },
     ];
 
     const documents = await Document.find(filter)
@@ -110,7 +109,7 @@ const getDocuments = async (req, res) => {
       .populate({
         path: 'project',
         select: 'projectName team owner',
-        populate: { path: 'team', select: 'teamName owner members' },
+        populate: { path: 'team', select: 'teamName manager members' },
       })
       .sort({ createdAt: -1 });
 
@@ -128,14 +127,14 @@ const getDocument = async (req, res) => {
       .populate({
         path: 'project',
         select: 'projectName team owner',
-        populate: { path: 'team', select: 'teamName owner members' },
+        populate: { path: 'team', select: 'teamName manager members' },
       });
     if (!document) {
       return res.status(404).json({ success: false, message: 'Document not found' });
     }
     if (document.project) {
       await requireProjectAccess(document.project._id || document.project, req.user._id);
-    } else if (document.uploadedBy._id.toString() !== req.user._id.toString()) {
+    } else {
       return res.status(403).json({ success: false, message: 'Not authorized to view this document' });
     }
     res.json({ success: true, data: document });
@@ -154,12 +153,11 @@ const deleteDocument = async (req, res) => {
 
     if (document.project) {
       const { role } = await requireProjectAccess(document.project, req.user._id);
-      const isUploader = document.uploadedBy.toString() === req.user._id.toString();
-      const isManager = [ROLE.OWNER, ROLE.TEAM_LEAD].includes(role);
-      if (!isUploader && !isManager) {
+      const isManager = [ROLE.ADMIN, ROLE.TEAM_LEAD].includes(role);
+      if (!isManager) {
         return res.status(403).json({ success: false, message: 'Not authorized to delete this document' });
       }
-    } else if (document.uploadedBy.toString() !== req.user._id.toString()) {
+    } else {
       return res.status(403).json({ success: false, message: 'Not authorized to delete this document' });
     }
 

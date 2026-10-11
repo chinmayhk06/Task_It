@@ -104,7 +104,7 @@ const getProjectReport = async (req, res) => {
                 { header: 'Project Name', key: 'name', width: 25 },
                 { header: 'Status', key: 'status', width: 14 },
                 { header: 'Priority', key: 'priority', width: 12 },
-                { header: 'Owner', key: 'owner', width: 20 },
+                { header: 'Created by', key: 'owner', width: 20 },
                 { header: 'Start Date', key: 'startDate', width: 14 },
                 { header: 'Deadline', key: 'deadline', width: 14 },
                 { header: 'Technologies', key: 'technologies', width: 25 },
@@ -116,7 +116,7 @@ const getProjectReport = async (req, res) => {
         }
 
         if (exportType === 'pdf') {
-            const headers = ['Project Name', 'Status', 'Priority', 'Owner', 'Start Date', 'Deadline', 'Technologies'];
+            const headers = ['Project Name', 'Status', 'Priority', 'Created by', 'Start Date', 'Deadline', 'Technologies'];
             const rows = data.map((r) => [r.name, r.status, r.priority, r.owner, r.startDate, r.deadline, r.technologies]);
             return sendPDF(res, 'Project Report', headers, rows, 'Project_Report');
         }
@@ -141,7 +141,7 @@ const getTeamReport = async (req, res) => {
             ws.columns = [
                 { header: 'Team Name', key: 'teamName', width: 22 },
                 { header: 'Description', key: 'description', width: 30 },
-                { header: 'Owner', key: 'owner', width: 20 },
+                { header: 'Manager', key: 'manager', width: 20 },
                 { header: 'Member Count', key: 'memberCount', width: 14 },
                 { header: 'Members', key: 'membersStr', width: 40 },
                 { header: 'Created At', key: 'createdAt', width: 16 },
@@ -157,10 +157,10 @@ const getTeamReport = async (req, res) => {
         }
 
         if (exportType === 'pdf') {
-            const headers = ['Team Name', 'Owner', 'Members', 'Created At'];
+            const headers = ['Team Name', 'Manager', 'Members', 'Created At'];
             const rows = data.map((t) => [
                 t.teamName,
-                t.owner,
+                t.manager,
                 t.members.map((m) => m.name).join(', '),
                 t.createdAt,
             ]);
@@ -183,7 +183,7 @@ const getInternReport = async (req, res) => {
 
         if (exportType === 'excel') {
             const wb = new ExcelJS.Workbook();
-            const ws = wb.addWorksheet('Intern Report');
+            const ws = wb.addWorksheet('Member Report');
             ws.columns = [
                 { header: 'Name', key: 'name', width: 22 },
                 { header: 'Email', key: 'email', width: 28 },
@@ -197,13 +197,13 @@ const getInternReport = async (req, res) => {
             ];
             styleHeader(ws.getRow(1));
             data.forEach((r) => ws.addRow(r));
-            return await sendExcel(res, wb, 'Intern_Report');
+            return await sendExcel(res, wb, 'Member_Report');
         }
 
         if (exportType === 'pdf') {
             const headers = ['Name', 'Role', 'Total', 'Done', 'In Progress', 'Pending', 'Overdue', 'Rate'];
             const rows = data.map((r) => [r.name, r.role, r.totalTasks, r.completed, r.inProgress, r.pending, r.overdue, r.completionRate]);
-            return sendPDF(res, 'Intern / Member Report', headers, rows, 'Intern_Report');
+            return sendPDF(res, 'Member Report', headers, rows, 'Member_Report');
         }
 
         res.json({ success: true, count: data.length, data });

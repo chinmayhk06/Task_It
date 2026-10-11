@@ -5,7 +5,7 @@ import {
     FiChevronRight, FiX, FiFileText
 } from "react-icons/fi";
 import {
-    getProjectReport, getTeamReport, getInternReport,
+    getProjectReport, getTeamReport, getMemberReport,
     getMonthlyReport, getCompletedTasksReport, getDelayedTasksReport,
     exportReport,
 } from "../../services/reportService";
@@ -38,7 +38,7 @@ const REPORTS = [
         description: "All your projects with status, priority, owner, and timeline details.",
         icon: FiFolder,
         fetch: getProjectReport,
-        columns: ["Project Name", "Status", "Priority", "Owner", "Start Date", "Deadline", "Technologies"],
+        columns: ["Project Name", "Status", "Priority", "Created by", "Start Date", "Deadline", "Technologies"],
         renderRow: (r) => [
             r.name,
             <Badge text={r.status} colorMap={statusColor} />,
@@ -52,23 +52,23 @@ const REPORTS = [
     {
         key: "teams",
         label: "Team Report",
-        description: "All teams you belong to with member lists and ownership details.",
+        description: "Teams you manage, their members, and designated managers.",
         icon: FiUsers,
         fetch: getTeamReport,
-        columns: ["Team Name", "Owner", "Members", "Created At"],
+        columns: ["Team Name", "Manager", "Members", "Created At"],
         renderRow: (r) => [
             r.teamName,
-            r.owner,
+            r.manager,
             r.members.map((m) => m.name).join(", "),
             r.createdAt,
         ],
     },
     {
         key: "interns",
-        label: "Intern Report",
+        label: "Member Report",
         description: "Per-member task breakdown: completion rates, overdue counts, workload.",
         icon: FiUser,
-        fetch: getInternReport,
+        fetch: getMemberReport,
         columns: ["Name", "Role", "Total", "Done", "In Progress", "Pending", "Overdue", "Rate"],
         renderRow: (r) => [
             r.name,

@@ -31,7 +31,7 @@ export const deleteTeam = async (id) => {
 };
 
 // Invite member
-export const inviteMember = async (id, email, role = "Intern") => {
+export const inviteMember = async (id, email, role = "Member") => {
     const response = await api.post(`/team/${id}/invite`, {
         email,
         role,
@@ -41,7 +41,7 @@ export const inviteMember = async (id, email, role = "Intern") => {
 };
 
 export const getInvitations = async (id) => (await api.get(`/team/${id}/invitations`)).data;
-export const transferOwnership = async (id, userId) => (await api.post(`/team/${id}/transfer-ownership`, { userId })).data;
+export const reassignManager = async (id, userId) => (await api.post(`/team/${id}/manager`, { userId })).data;
 export const resendInvitation = async (id, invitationId) => (await api.post(`/team/${id}/invitations/${invitationId}/resend`)).data;
 export const revokeInvitation = async (id, invitationId) => (await api.delete(`/team/${id}/invitations/${invitationId}`)).data;
 

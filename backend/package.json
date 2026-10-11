@@ -4,6 +4,8 @@
   "description": "",
   "main": "index.js",
   "scripts": {
+    "migrate:rbac": "node scripts/migrate-rbac.js",
+    "bootstrap:admin": "node scripts/bootstrap-admin.js",
     "test": "node --test test/*.test.js",
     "dev": "nodemon src/server.js",
     "start": "node src/server.js"

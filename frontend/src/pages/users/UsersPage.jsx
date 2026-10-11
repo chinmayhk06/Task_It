@@ -7,22 +7,9 @@ import {
     getUsers, createUser, updateUser, deleteUser, assignRole, toggleActivate
 } from "../../services/userService";
 
-const ROLES = [
-    "Super Admin", "Project Manager", "Team Lead",
-    "Developer", "Frontend Developer", "Backend Developer",
-    "ML Engineer", "Intern",
-];
+const ROLES = ["Admin", "Team Lead", "Member"];
 
-const ROLE_COLORS = {
-    "Super Admin":        "bg-red-100 text-red-700",
-    "Project Manager":    "bg-[var(--hover-bg)] text-[var(--title-color)]",
-    "Team Lead":          "bg-blue-100 text-blue-700",
-    "Developer":          "bg-cyan-100 text-cyan-700",
-    "Frontend Developer": "bg-pink-100 text-pink-700",
-    "Backend Developer":  "bg-orange-100 text-orange-700",
-    "ML Engineer":        "bg-green-100 text-green-700",
-    "Intern":             "bg-[var(--hover-bg)] text-[var(--subtitle-color)]",
-};
+const ROLE_COLORS = Object.fromEntries(ROLES.map(role => [role, "bg-[var(--hover-bg)] text-[var(--title-color)]"]));
 
 function getInitials(name) {
     return (name || "?").split(" ").map(n => n[0]).join("").toUpperCase().slice(0, 2);
@@ -35,9 +22,10 @@ function UserModal({ user, onClose, onSave }) {
         fullName: user?.fullName || "",
         email: user?.email || "",
         password: "",
-        role: user?.role || "Intern",
+        role: user?.role || "Member",
         department: user?.department || "",
         phone: user?.phone || "",
+        jobTitle: user?.jobTitle || "",
     });
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState("");
@@ -50,7 +38,7 @@ function UserModal({ user, onClose, onSave }) {
         setLoading(true);
         try {
             if (isEdit) {
-                const payload = { fullName: form.fullName, email: form.email, role: form.role, department: form.department, phone: form.phone };
+                const payload = { fullName: form.fullName, email: form.email, role: form.role, department: form.department, phone: form.phone, jobTitle: form.jobTitle };
                 await updateUser(user._id, payload);
             } else {
                 await createUser(form);
@@ -87,8 +75,9 @@ function UserModal({ user, onClose, onSave }) {
                 <form onSubmit={handleSubmit} className="p-6 space-y-4">
                     <div className="grid grid-cols-2 gap-3">
                         <div className="col-span-2">{field("Full Name *", "fullName", "text", "Jane Doe")}</div>
+                        <div className="col-span-2">{field("Job title (optional)", "jobTitle")}</div>
                         <div className="col-span-2">{field("Email *", "email", "email", "jane@example.com")}</div>
-                        {!isEdit && <div className="col-span-2">{field("Password *", "password", "password", "Min 6 characters")}</div>}
+                        {!isEdit && <div className="col-span-2">{field("Password *", "password", "password", "Min 8 characters")}</div>}
                         <div>
                             <label className="mb-1 block text-xs font-semibold text-[var(--subtitle-color)]">Role</label>
                             <select
@@ -128,7 +117,7 @@ function RoleModal({ user, onClose, onSave }) {
             await assignRole(user._id, role);
             onSave();
             onClose();
-        } catch { alert("Failed to update role."); }
+        } catch (err) { alert(err.response?.data?.message || "Failed to update role."); }
         finally { setLoading(false); }
     };
 

@@ -1,4 +1,5 @@
 const mongoose = require("mongoose");
+const { ACCOUNT_ROLES, ROLE } = require("../utils/roles");
 
 const userSchema = new mongoose.Schema(
   {
@@ -34,18 +35,10 @@ const userSchema = new mongoose.Schema(
 
     role: {
       type: String,
-      enum: [
-        "Super Admin",
-        "Project Manager",
-        "Team Lead",
-        "Developer",
-        "Frontend Developer",
-        "Backend Developer",
-        "ML Engineer",
-        "Intern",
-      ],
-      default: "Intern",
+      enum: ACCOUNT_ROLES,
+      default: ROLE.MEMBER,
     },
+    jobTitle: { type: String, trim: true, maxlength: 100, default: "" },
 
     department: {
       type: String,

@@ -1,4 +1,5 @@
 const mongoose = require("mongoose");
+const { TEAM_ROLES, ROLE } = require("../utils/roles");
 
 const memberSchema = new mongoose.Schema(
   {
@@ -10,8 +11,8 @@ const memberSchema = new mongoose.Schema(
 
     role: {
       type: String,
-      enum: ["Owner", "TeamLead", "Intern", "Member"],
-      default: "Intern",
+      enum: TEAM_ROLES,
+      default: ROLE.MEMBER,
     },
   },
   {
@@ -33,7 +34,7 @@ const teamSchema = new mongoose.Schema(
       default: "",
     },
 
-    owner: {
+    manager: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
       required: true,
@@ -43,7 +44,7 @@ const teamSchema = new mongoose.Schema(
     invitations: {
       type: [new mongoose.Schema({
         email: { type: String, required: true, lowercase: true, trim: true },
-        role: { type: String, enum: ["TeamLead", "Intern"], required: true },
+        role: { type: String, enum: TEAM_ROLES, required: true },
         tokenHash: { type: String, required: true },
         expiresAt: { type: Date, required: true },
         sentAt: { type: Date, required: true },
@@ -63,13 +64,10 @@ const teamSchema = new mongoose.Schema(
 
 teamSchema.index({ "invitations.tokenHash": 1 });
 
-teamSchema.pre("validate", function normalizeTeamRoles() {
-  if (Array.isArray(this.members)) {
-    this.members.forEach((member) => {
-      if (member.role === "Member") {
-        member.role = "Intern";
-      }
-    });
-  }
+teamSchema.pre("validate", function validateManager() {
+  const ids = this.members.map((m) => String(m.user));
+  if (new Set(ids).size !== ids.length) this.invalidate("members", "Duplicate team member");
+  const manager = this.members.find((m) => String(m.user) === String(this.manager));
+  if (!manager || manager.role !== ROLE.TEAM_LEAD) this.invalidate("manager", "Designated manager must be a Team Lead member");
 });
 module.exports = mongoose.model("Team", teamSchema);

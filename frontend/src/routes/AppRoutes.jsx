@@ -1,4 +1,6 @@
-﻿import { Routes, Route, Navigate } from "react-router-dom";
+﻿import { Routes, Route, Navigate, useLocation } from "react-router-dom";
+import { useEffect, useState } from "react";
+import api from "../services/api";
 import Login from "../pages/auth/Login";
 import Register from "../pages/auth/Register";
 import Dashboard from "../pages/dashboard/Dashboard";
@@ -19,7 +21,7 @@ import DocumentsPage from "../pages/documents/DocumentsPage";
 import UsersPage from "../pages/users/UsersPage";
 import SettingsPage from "../pages/settings/SettingsPage";
 import GitHubPage from "../pages/github/GitHubPage";
-import { isSuperAdmin } from "../utils/rbac";
+import { isAdmin, canCreateTeam, canViewReports } from "../utils/rbac";
 
 function getStoredUser() {
     try {
@@ -31,13 +33,27 @@ function getStoredUser() {
 
 function ProtectedRoute({ children, requireAdmin = false }) {
     const token = localStorage.getItem("token");
-    const user = getStoredUser();
+    const location = useLocation();
+    const [profile, setProfile] = useState(null);
+    useEffect(() => {
+        let active = true;
+        if (token) api.get("/auth/profile").then(({ data }) => {
+            if (!active) return;
+            localStorage.setItem("user", JSON.stringify(data.user));
+            setProfile({ key: location.key, user: data.user });
+        }).catch(() => { if (active) setProfile({ key: location.key, error: true }); });
+        return () => { active = false; };
+    }, [token, location.key]);
+    const user = profile?.user || getStoredUser();
 
     if (!token || !user?.id) {
         return <Navigate to="/login" replace />;
     }
 
-    if (requireAdmin && !isSuperAdmin(user)) {
+    if (profile?.key !== location.key) return <div className="app-page">Loading permissions...</div>;
+    if (profile.error) return <div className="app-page">Unable to verify access. Please sign in again.</div>;
+    if ((location.pathname === "/teams/new" && !canCreateTeam(user)) || (location.pathname === "/reports" && !canViewReports(user))) return <Navigate to="/dashboard" replace />;
+    if (requireAdmin && !isAdmin(user)) {
         return <Navigate to="/dashboard" replace />;
     }
 

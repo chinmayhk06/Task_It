@@ -4,7 +4,7 @@ export const getProjectReport = () => api.get('/reports/projects');
 
 export const getTeamReport = () => api.get('/reports/teams');
 
-export const getInternReport = () => api.get('/reports/interns');
+export const getMemberReport = () => api.get('/reports/members');
 
 export const getMonthlyReport = (month) =>
   api.get('/reports/monthly', { params: month ? { month } : {} });

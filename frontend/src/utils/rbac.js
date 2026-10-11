@@ -1,10 +1,13 @@
 export const TEAM_ROLES = {
-  OWNER: "Owner",
-  TEAM_LEAD: "TeamLead",
-  INTERN: "Intern",
+  ADMIN: "Admin",
+  TEAM_LEAD: "Team Lead",
+  MEMBER: "Member",
 };
 
-export const normalizeRole = (role) => (role === "Member" ? TEAM_ROLES.INTERN : role);
+export const normalizeRole = role => Object.values(TEAM_ROLES).includes(role) ? role : null;
+export const getCurrentUser = () => { try { return JSON.parse(localStorage.getItem("user") || "{}"); } catch { return {}; } };
+export const canCreateTeam = (user = getCurrentUser()) => ["Admin", "Team Lead"].includes(user?.role) || user?.capabilities?.canCreateTeams === true;
+export const canViewReports = (user = getCurrentUser()) => ["Admin", "Team Lead"].includes(user?.role) || user?.capabilities?.canViewReports === true;
 
 export const getCurrentUserId = () => {
   try {
@@ -29,14 +32,16 @@ export const getId = (value) => value?._id || value?.id || value || null;
 
 export const getTeamRole = (team, userId) => {
   if (!team || !userId) return null;
-  if (getId(team.owner) === userId) return TEAM_ROLES.OWNER;
+  const actor = getCurrentUser();
+  if (getId(actor) === userId && actor.role === "Admin") return TEAM_ROLES.ADMIN;
+  if (getId(team.manager) === userId) return TEAM_ROLES.TEAM_LEAD;
 
   const member = team.members?.find((entry) => getId(entry.user) === userId);
   return member ? normalizeRole(member.role) : null;
 };
 
 export const canManageProjects = (role) =>
-  [TEAM_ROLES.OWNER, TEAM_ROLES.TEAM_LEAD].includes(role);
+  [TEAM_ROLES.ADMIN, TEAM_ROLES.TEAM_LEAD].includes(role);
 
 export const canManageTasks = canManageProjects;
 
@@ -44,7 +49,7 @@ export const canDeleteProject = canManageProjects;
 
 export const canEditTeam = canManageProjects;
 
-export const canDeleteTeam = (role) => role === TEAM_ROLES.OWNER;
+export const canDeleteTeam = canManageProjects;
 
 export const canManageMembers = canEditTeam;
 
@@ -58,4 +63,4 @@ export const canAssignTask = canManageTasks;
 
 export const canDeleteTask = canManageTasks;
 
-export const isSuperAdmin = (user) => user?.role === "Super Admin";
+export const isAdmin = (user) => user?.role === "Admin";

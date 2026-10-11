@@ -46,7 +46,6 @@ export default function TaskFormModal({ isOpen, onClose, onSubmit, task, project
 
     const currentUserId = getCurrentUserId();
     const manageableProjects = projects.filter((project) => {
-        if (!project.team && getId(project.owner) === currentUserId) return true;
         return canManageTasks(getTeamRole(project.team, currentUserId));
     });
     const selectedProject = projects.find((project) => project._id === formData.project);

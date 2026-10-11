@@ -3,7 +3,7 @@ import { Link } from "react-router-dom";
 
 export default function TeamCard({ team }) {
     const memberCount = team.members?.length || 0;
-    const ownerName = team.owner?.fullName || "Owner";
+    const managerName = team.manager?.fullName || "Manager";
 
     return (
         <Link
@@ -22,7 +22,7 @@ export default function TeamCard({ team }) {
                         </h2>
 
                         <p className="mt-1 text-sm text-[var(--subtitle-color)]">
-                            Owned by {ownerName}
+                            Managed by {managerName}
                         </p>
                     </div>
                 </div>

@@ -7,7 +7,9 @@ const {
   requireTeamAccess,
 } = require('../utils/rbac');
 
-const PROJECT_MANAGERS = [ROLE.OWNER, ROLE.TEAM_LEAD];
+const PROJECT_MANAGERS = [ROLE.ADMIN, ROLE.TEAM_LEAD];
+const projectFields = new Set(['projectName', 'description', 'team', 'status', 'priority', 'technologies', 'startDate', 'deadline', 'githubRepo', 'deploymentLink']);
+const safeProjectData = (data) => Object.fromEntries(Object.entries(data).filter(([key]) => projectFields.has(key)));
 
 const attachProjectProgress = async (projects) => {
   const projectList = Array.isArray(projects) ? projects : [projects];
@@ -54,7 +56,7 @@ const createProject = async (data, userId) => {
   await requireTeamAccess(data.team, userId, PROJECT_MANAGERS);
 
   return await Project.create({
-    ...data,
+    ...safeProjectData(data),
     owner: userId,
     team: data.team,
   });
@@ -65,7 +67,6 @@ const getAllProjects = async (userId, filters = {}) => {
   const query = {
     $or: [
       { team: { $in: teamIds } },
-      { owner: userId, team: { $exists: false } },
     ],
   };
 
@@ -89,7 +90,7 @@ const getAllProjects = async (userId, filters = {}) => {
     .populate('owner', 'fullName email')
     .populate({
       path: 'team',
-      select: 'teamName owner members',
+      select: 'teamName manager members',
       populate: { path: 'members.user', select: 'fullName email role' },
     })
     .sort(sort);
@@ -103,11 +104,11 @@ const getProjectById = async (projectId, userId) => {
     .populate('owner', 'fullName email')
     .populate({
       path: 'team',
-      select: 'teamName owner members',
+      select: 'teamName manager members',
       populate: { path: 'members.user', select: 'fullName email role' },
     });
   const taskQuery = { project: project._id };
-  if (role === ROLE.INTERN) {
+  if (role === ROLE.MEMBER) {
     taskQuery.assignee = userId;
   }
 
@@ -125,9 +126,12 @@ const getProjectById = async (projectId, userId) => {
 
 const updateProject = async (projectId, userId, data) => {
   const { project } = await requireProjectAccess(projectId, userId, PROJECT_MANAGERS);
+  data = safeProjectData(data);
+  if ('team' in data && !data.team) throw Object.assign(new Error('Project team is required'), { statusCode: 400 });
 
   if (data.team && data.team.toString() !== project.team?._id?.toString()) {
     await requireTeamAccess(data.team, userId, PROJECT_MANAGERS);
+    if (await Task.exists({ project: projectId })) throw Object.assign(new Error('Cannot move a project with tasks; preserve assignment relationships'), { statusCode: 409 });
   }
 
   Object.assign(project, data);
@@ -137,7 +141,7 @@ const updateProject = async (projectId, userId, data) => {
     .populate('owner', 'fullName email')
     .populate({
       path: 'team',
-      select: 'teamName owner members',
+      select: 'teamName manager members',
       populate: { path: 'members.user', select: 'fullName email role' },
     });
 };
@@ -152,6 +156,9 @@ const deleteProject = async (projectId, userId) => {
     throw error;
   }
 
+  if (await require('../models/Document').exists({ project: project._id })) {
+    throw Object.assign(new Error('Cannot delete project while documents exist.'), { statusCode: 409 });
+  }
   await Project.findByIdAndDelete(project._id);
   return true;
 };

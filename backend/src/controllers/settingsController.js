@@ -15,7 +15,7 @@ const getProfile = async (req, res) => {
 // PUT /api/settings/profile
 const updateProfile = async (req, res) => {
     try {
-        const { fullName, email, phone, department, profileImage } = req.body;
+        const { fullName, email, phone, department, profileImage, jobTitle } = req.body;
         const user = await User.findById(req.user._id);
         if (!user) return res.status(404).json({ success: false, message: "User not found" });
 
@@ -24,6 +24,7 @@ const updateProfile = async (req, res) => {
         if (phone !== undefined)      user.phone = phone;
         if (department !== undefined) user.department = department;
         if (profileImage !== undefined) user.profileImage = profileImage;
+        if (jobTitle !== undefined) user.jobTitle = jobTitle;
 
         await user.save();
         const updated = user.toObject();

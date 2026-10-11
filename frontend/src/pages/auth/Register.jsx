@@ -18,7 +18,8 @@ function Register() {
     email: "",
     password: "",
     confirmPassword: "",
-    role: "Developer",
+    role: "Member",
+    jobTitle: "",
   });
 
   const navigate = useNavigate();
@@ -93,6 +94,7 @@ function Register() {
             email: formData.email,
             password: formData.password,
             role: formData.role,
+        jobTitle: formData.jobTitle,
         });
 
         setSuccessMessage(response.data.message || "Account created successfully");
@@ -226,15 +228,15 @@ function Register() {
                 onChange={handleChange}
                 className="h-11 w-full rounded-md border border-[var(--border-color)] bg-[var(--surface-card)] px-3 text-sm text-[var(--title-color)] outline-none transition focus:border-[var(--title-color)]"
               >
-                <option value="Project Manager">Project Manager</option>
+                <option value="Member">Member</option>
                 <option value="Team Lead">Team Lead</option>
-                <option value="Developer">Developer</option>
-                <option value="Intern">Intern</option>
               </select>
               {errors.role && (
                 <p className="mt-1 text-sm text-red-600">{errors.role}</p>
               )}
             </div>
+
+            <Input label="Job title (optional)" name="jobTitle" value={formData.jobTitle} onChange={handleChange} />
 
             {submitError && (
               <p className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">

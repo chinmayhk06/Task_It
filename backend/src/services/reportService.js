@@ -1,11 +1,11 @@
 const Task = require('../models/Task');
 const Project = require('../models/Project');
 const Team = require('../models/Team');
-const { getManagedTeamIds, getManagedProjectIds } = require('../utils/rbac');
+const { getManagedTeamIds, getManagedProjectIds, getActor, getAccountCapabilities } = require('../utils/rbac');
 
 const requireReportProjects = async (userId) => {
     const projectIds = await getManagedProjectIds(userId);
-    if (projectIds.length === 0) {
+    if (!(await getAccountCapabilities(await getActor(userId))).canViewReports) {
         const error = new Error('Insufficient report permissions');
         error.statusCode = 403;
         throw error;
@@ -39,19 +39,19 @@ const getProjectReport = async (userId) => {
 // 2. Team Report
 const getTeamReport = async (userId) => {
     const teamIds = await getManagedTeamIds(userId);
-    if (teamIds.length === 0) {
+    if (!(await getAccountCapabilities(await getActor(userId))).canViewReports) {
         const error = new Error('Insufficient report permissions');
         error.statusCode = 403;
         throw error;
     }
     const teams = await Team.find({ _id: { $in: teamIds } })
-        .populate('owner', 'fullName email')
+        .populate('manager', 'fullName email')
         .populate('members.user', 'fullName email role');
 
     return teams.map((t) => ({
         teamName: t.teamName,
         description: t.description || '-',
-        owner: t.owner?.fullName || 'N/A',
+        manager: t.manager?.fullName || 'N/A',
         memberCount: t.members.length,
         members: t.members.map((m) => ({
             name: m.user?.fullName || 'Unknown',
@@ -65,7 +65,7 @@ const getTeamReport = async (userId) => {
 // 3. Intern / Member Report
 const getInternReport = async (userId) => {
     const teamIds = await getManagedTeamIds(userId);
-    if (teamIds.length === 0) {
+    if (!(await getAccountCapabilities(await getActor(userId))).canViewReports) {
         const error = new Error('Insufficient report permissions');
         error.statusCode = 403;
         throw error;
@@ -129,8 +129,6 @@ const getMonthlyReport = async (userId, monthParam) => {
     const tasks = await Task.find({
         $or: [
             { project: { $in: projectIds } },
-            { createdBy: userId, project: { $exists: false } },
-            { assignee: userId, project: { $exists: false } },
         ],
         createdAt: { $gte: startOfMonth, $lte: endOfMonth },
     })
@@ -163,8 +161,6 @@ const getCompletedTasksReport = async (userId) => {
     const tasks = await Task.find({
         $or: [
             { project: { $in: projectIds } },
-            { createdBy: userId, project: { $exists: false } },
-            { assignee: userId, project: { $exists: false } },
         ],
         status: 'Completed',
     })
@@ -192,8 +188,6 @@ const getDelayedTasksReport = async (userId) => {
     const tasks = await Task.find({
         $or: [
             { project: { $in: projectIds } },
-            { createdBy: userId, project: { $exists: false } },
-            { assignee: userId, project: { $exists: false } },
         ],
         deadline: { $lt: now },
         status: { $ne: 'Completed' },

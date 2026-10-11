@@ -1,6 +1,7 @@
 ﻿import { useCallback, useEffect, useState } from "react";
 import { FiPlus, FiRefreshCw, FiUsers } from "react-icons/fi";
 
+import { canCreateTeam } from "../../utils/rbac";
 import { getTeams } from "../../services/teamService";
 
 import TeamCard from "../../components/team/TeamCard";
@@ -102,13 +103,13 @@ export default function TeamList() {
                         Refresh
                     </button>
 
-                    <button
+                    {canCreateTeam() && <button
                         onClick={() => setShowModal(true)}
                         className="inline-flex items-center gap-2 rounded-md bg-[var(--accent)] px-5 py-3 text-[var(--accent-contrast)] hover:bg-[var(--accent-hover)]"
                     >
                         <FiPlus />
                         New Team
-                    </button>
+                    </button>}
                 </div>
             </div>
 
@@ -119,7 +120,7 @@ export default function TeamList() {
             )}
 
             {teams.length === 0 ? (
-                <EmptyState onCreate={() => setShowModal(true)} />
+                <EmptyState onCreate={canCreateTeam() ? () => setShowModal(true) : undefined} />
             ) : (
                 <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
 

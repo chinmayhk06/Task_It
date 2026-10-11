@@ -174,6 +174,9 @@ export default function SettingsPage() {
                     </div>
                   </div>
 
+                  <label className="block text-sm">Job title (optional)
+                    <input maxLength={100} value={profile.jobTitle || ""} onChange={e => setProfile({...profile, jobTitle: e.target.value})} className="mt-1 w-full rounded-md border border-[var(--border-color)] bg-[var(--surface-card)] px-4 py-2.5" />
+                  </label>
                   <button type="submit" disabled={profileLoading} className="flex items-center gap-2 rounded-md bg-[var(--accent)] px-5 py-2.5 text-sm font-semibold text-[var(--accent-contrast)] hover:bg-[var(--accent-hover)] transition disabled:opacity-70">
                     {profileLoading ? "Saving..." : <><FiSave size={16} /> Save Changes</>}
                   </button>
@@ -294,7 +297,7 @@ export default function SettingsPage() {
                         className="w-full rounded-md border border-[var(--border-color)] dark:border-gray-700 bg-[var(--surface-muted)] dark:bg-gray-900 px-4 py-2.5 text-[var(--subtitle-color)] dark:text-[var(--muted-color)] cursor-not-allowed resize-none" />
                     </div>
                     <p className="text-xs text-amber-600 dark:text-amber-400 mt-2 flex items-center gap-1">
-                      <FiLock size={12} /> Only Super Admins can edit organization settings.
+                      <FiLock size={12} /> Only Admins can edit organization settings.
                     </p>
                   </div>
                 </div>

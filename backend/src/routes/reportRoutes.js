@@ -15,7 +15,8 @@ router.use(protect);
 
 router.get('/projects', getProjectReport);
 router.get('/teams', getTeamReport);
-router.get('/interns', getInternReport);
+router.get('/members', getInternReport);
+router.get('/interns', getInternReport); // Backwards-compatible API alias
 router.get('/monthly', getMonthlyReport);
 router.get('/completed-tasks', getCompletedTasksReport);
 router.get('/delayed-tasks', getDelayedTasksReport);

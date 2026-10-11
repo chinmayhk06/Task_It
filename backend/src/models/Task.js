@@ -68,15 +68,14 @@ const taskSchema = new mongoose.Schema(
       enum: ['Pending', 'In Progress', 'Completed'],
       default: 'Pending'
     },
+    progress: { type: Number, min: 0, max: 100, default: 0 },
     deadline: {
       type: Date
     },
     project: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'Project',
-      required: function requireProjectForNewTask() {
-        return this.isNew;
-      }
+      required: true
     },
     assignee: {
       type: mongoose.Schema.Types.ObjectId,

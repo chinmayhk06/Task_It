@@ -91,7 +91,6 @@ const ProjectsPage = () => {
   const canCreateProject = manageableTeams.length > 0;
 
   const projectRole = (project) => {
-    if (!project.team && getId(project.owner) === currentUserId) return "Owner";
     return getTeamRole(project.team, currentUserId);
   };
 

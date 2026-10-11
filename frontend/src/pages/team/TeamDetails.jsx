@@ -8,6 +8,7 @@ import {
     FiUsers,
 } from "react-icons/fi";
 import { Link, useNavigate, useParams } from "react-router-dom";
+import { getUsers } from "../../services/userService";
 
 import {
     deleteTeam,
@@ -16,7 +17,7 @@ import {
     leaveTeam,
     removeMember,
     updateMemberRole,
-    getInvitations, resendInvitation, revokeInvitation, transferOwnership,
+    getInvitations, resendInvitation, revokeInvitation, reassignManager,
 } from "../../services/teamService";
 import {
     canDeleteTeam,
@@ -33,9 +34,10 @@ export default function TeamDetails() {
 
     const [team, setTeam] = useState(null);
     const [email, setEmail] = useState("");
-    const [inviteRole, setInviteRole] = useState("Intern");
+    const [inviteRole, setInviteRole] = useState("Member");
     const [invitations, setInvitations] = useState([]);
-    const [newOwner, setNewOwner] = useState("");
+    const [managerCandidates, setManagerCandidates] = useState([]);
+    const [newManager, setNewManager] = useState("");
     const [loading, setLoading] = useState(true);
     const [actionLoading, setActionLoading] = useState(false);
     const [error, setError] = useState("");
@@ -53,6 +55,10 @@ export default function TeamDetails() {
             setError("");
             const response = await getTeam(id);
             setTeam(response.data);
+            if (getTeamRole(response.data, getCurrentUserId()) === "Admin") {
+                const users = (await getUsers()).data.data;
+                setManagerCandidates(users.filter(user => user.isActive && (["Admin", "Team Lead"].includes(user.role) || response.data.members.some(member => (member.user?._id || member.user) === user._id && member.role === "Team Lead"))));
+            }
             if (canManageMembers(getTeamRole(response.data, getCurrentUserId()))) {
                 setInvitations((await getInvitations(id)).data);
             } else { setInvitations([]); }
@@ -108,10 +114,10 @@ export default function TeamDetails() {
     };
 
     const handleTransfer = async () => {
-        if (!newOwner || !confirm("Transfer ownership to this member? You will become a TeamLead.")) return;
+        if (!newManager || !confirm("Reassign the team manager? The previous manager will become a Member.")) return;
         setActionLoading(true); setError("");
-        try { await transferOwnership(id, newOwner); setNewOwner(""); await fetchTeam(); setSuccess("Ownership transferred."); }
-        catch (err) { setError(err.response?.data?.message || "Unable to transfer ownership."); }
+        try { await reassignManager(id, newManager); setNewManager(""); await fetchTeam(); setSuccess("Manager reassigned."); }
+        catch (err) { setError(err.response?.data?.message || "Unable to reassign manager."); }
         finally { setActionLoading(false); }
     };
 
@@ -253,7 +259,7 @@ export default function TeamDetails() {
                                 )}
                             </>
                         ) : null}
-                        {currentTeamRole !== "Owner" && (
+                        {(team.manager?._id || team.manager) !== currentUserId && team.members.some(m => (m.user?._id || m.user) === currentUserId) && (
                             <button
                                 onClick={handleLeaveTeam}
                                 disabled={actionLoading}
@@ -286,8 +292,8 @@ export default function TeamDetails() {
                             {team.members.map((member) => {
                                 const user = member.user;
                                 const userId = user?._id || user;
-                                const isTeamOwner =
-                                    userId === (team.owner?._id || team.owner);
+                                const isManager =
+                                    userId === (team.manager?._id || team.manager);
 
                                 return (
                                     <div
@@ -305,7 +311,7 @@ export default function TeamDetails() {
                                         </div>
 
                                         <div className="flex items-center gap-3">
-                                            {canManageTeamMembers && !isTeamOwner ? (
+                                            {canManageTeamMembers && !isManager ? (
                                                 <select
                                                     value={normalizeRole(member.role)}
                                                     onChange={(e) =>
@@ -314,8 +320,8 @@ export default function TeamDetails() {
                                                     disabled={actionLoading}
                                                     className="rounded-md border border-[var(--border-color)] bg-[var(--surface-card)] px-3 py-1 text-sm outline-none focus:border-[var(--title-color)]"
                                                 >
-                                                    <option value="Intern">Intern</option>
-                                                    <option value="TeamLead">TeamLead</option>
+                                                    <option value="Member">Member</option>
+                                                    <option value="Team Lead">Team Lead</option>
                                                 </select>
                                             ) : (
                                                 <span className="rounded-full bg-[var(--hover-bg)] px-3 py-1 text-sm">
@@ -323,7 +329,7 @@ export default function TeamDetails() {
                                                 </span>
                                             )}
 
-                                            {canManageTeamMembers && !isTeamOwner && (
+                                            {canManageTeamMembers && !isManager && (
                                                 <button
                                                     onClick={() =>
                                                         handleRemoveMember(userId)
@@ -395,11 +401,11 @@ export default function TeamDetails() {
                         <div className="mt-5 space-y-4">
                             <div className="rounded-md bg-[var(--surface-muted)] p-4">
                                 <p className="text-sm text-[var(--subtitle-color)]">
-                                    Owner
+                                    Manager
                                 </p>
 
                                 <p className="mt-1 font-medium">
-                                    {team.owner?.fullName || "Team Owner"}
+                                    {team.manager?.fullName || "Team Manager"}
                                 </p>
                             </div>
 
@@ -414,7 +420,7 @@ export default function TeamDetails() {
 
                                     <label className="block">Team role
                                         <select value={inviteRole} onChange={(e) => setInviteRole(e.target.value)} className="ml-2 rounded-md border border-[var(--border-color)] bg-[var(--surface-card)] p-2">
-                                            <option value="Intern">Intern</option><option value="TeamLead">TeamLead</option>
+                                            <option value="Member">Member</option><option value="Team Lead">Team Lead</option>
                                         </select>
                                     </label>
                                     <div className="flex gap-2">
@@ -440,14 +446,14 @@ export default function TeamDetails() {
                                 </form>
                             )}
 
-                            {canDeleteCurrentTeam && <section className="space-y-3">
-                                <label className="block">Transfer ownership
-                                    <select value={newOwner} onChange={(e) => setNewOwner(e.target.value)} className="mt-2 w-full rounded-md border border-[var(--border-color)] bg-[var(--surface-card)] p-2">
-                                        <option value="">Choose a member</option>
-                                        {team.members.filter((m) => (m.user?._id || m.user) !== (team.owner?._id || team.owner)).map((m) => <option key={m.user?._id || m.user} value={m.user?._id || m.user}>{m.user?.fullName || m.user?.email}</option>)}
+                            {currentTeamRole === "Admin" && <section className="space-y-3">
+                                <label className="block">Reassign manager
+                                    <select value={newManager} onChange={(e) => setNewManager(e.target.value)} className="mt-2 w-full rounded-md border border-[var(--border-color)] bg-[var(--surface-card)] p-2">
+                                        <option value="">Choose a Team Lead</option>
+                                        {managerCandidates.filter(user => user._id !== (team.manager?._id || team.manager)).map(user => <option key={user._id} value={user._id}>{user.fullName} ({user.email})</option>)}
                                     </select>
                                 </label>
-                                <button disabled={actionLoading || !newOwner} className="underline disabled:opacity-50" onClick={handleTransfer}>Transfer ownership</button>
+                                <button disabled={actionLoading || !newManager} className="underline disabled:opacity-50" onClick={handleTransfer}>Reassign manager</button>
                             </section>}
                             {canManageTeamMembers && <section className="space-y-3">
                                 <h3 className="font-semibold">Pending invitations</h3>

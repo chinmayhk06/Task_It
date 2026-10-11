@@ -1,7 +1,7 @@
 ﻿import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { getProjectById } from "../../services/projectService";
-import { canManageProjects, getCurrentUserId, getId, getTeamRole } from "../../utils/rbac";
+import { canManageProjects, getCurrentUserId, getTeamRole } from "../../utils/rbac";
 
 const ProjectDetails = () => {
   const { id } = useParams();
@@ -51,9 +51,7 @@ const ProjectDetails = () => {
   }
 
   const currentUserId = getCurrentUserId();
-  const role = !project.team && getId(project.owner) === currentUserId
-    ? "Owner"
-    : getTeamRole(project.team, currentUserId);
+  const role = getTeamRole(project.team, currentUserId);
   const canEditProject = canManageProjects(role);
 
   return (

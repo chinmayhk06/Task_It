@@ -44,8 +44,8 @@ export default function TaskDetailsModal({ isOpen, onClose, taskId, onTaskUpdate
         e.preventDefault();
         if (!newSubtask.trim()) return;
         try {
-            const res = await addSubtask(taskId, newSubtask.trim());
-            setTask(res.data);
+            await addSubtask(taskId, newSubtask.trim());
+            setTask((await getTask(taskId)).data);
             setNewSubtask("");
             onTaskUpdated();
         } catch {
@@ -55,8 +55,8 @@ export default function TaskDetailsModal({ isOpen, onClose, taskId, onTaskUpdate
 
     const handleToggleSubtask = async (subtaskId, isCompleted) => {
         try {
-            const res = await toggleSubtask(taskId, subtaskId, isCompleted);
-            setTask(res.data);
+            await toggleSubtask(taskId, subtaskId, isCompleted);
+            setTask((await getTask(taskId)).data);
             onTaskUpdated();
         } catch {
             setError("Failed to toggle subtask.");
@@ -65,8 +65,8 @@ export default function TaskDetailsModal({ isOpen, onClose, taskId, onTaskUpdate
 
     const handleDeleteSubtask = async (subtaskId) => {
         try {
-            const res = await deleteSubtask(taskId, subtaskId);
-            setTask(res.data);
+            await deleteSubtask(taskId, subtaskId);
+            setTask((await getTask(taskId)).data);
             onTaskUpdated();
         } catch {
             setError("Failed to delete subtask.");
@@ -77,8 +77,8 @@ export default function TaskDetailsModal({ isOpen, onClose, taskId, onTaskUpdate
         e.preventDefault();
         if (!commentText.trim()) return;
         try {
-            const res = await addComment(taskId, commentText.trim());
-            setTask(res.data);
+            await addComment(taskId, commentText.trim());
+            setTask((await getTask(taskId)).data);
             setCommentText("");
             onTaskUpdated();
         } catch {
@@ -88,8 +88,8 @@ export default function TaskDetailsModal({ isOpen, onClose, taskId, onTaskUpdate
 
     const handleDeleteComment = async (commentId) => {
         try {
-            const res = await deleteComment(taskId, commentId);
-            setTask(res.data);
+            await deleteComment(taskId, commentId);
+            setTask((await getTask(taskId)).data);
             onTaskUpdated();
         } catch {
             setError("Failed to delete comment.");
@@ -100,8 +100,8 @@ export default function TaskDetailsModal({ isOpen, onClose, taskId, onTaskUpdate
         e.preventDefault();
         if (!attachment.name.trim() || !attachment.url.trim()) return;
         try {
-            const res = await addAttachment(taskId, attachment.name.trim(), attachment.url.trim());
-            setTask(res.data);
+            await addAttachment(taskId, attachment.name.trim(), attachment.url.trim());
+            setTask((await getTask(taskId)).data);
             setAttachment({ name: "", url: "" });
             onTaskUpdated();
         } catch {
@@ -111,8 +111,8 @@ export default function TaskDetailsModal({ isOpen, onClose, taskId, onTaskUpdate
 
     const handleDeleteAttachment = async (attachmentId) => {
         try {
-            const res = await deleteAttachment(taskId, attachmentId);
-            setTask(res.data);
+            await deleteAttachment(taskId, attachmentId);
+            setTask((await getTask(taskId)).data);
             onTaskUpdated();
         } catch {
             setError("Failed to delete attachment.");
@@ -121,8 +121,8 @@ export default function TaskDetailsModal({ isOpen, onClose, taskId, onTaskUpdate
 
     const handleStatusChange = async (status) => {
         try {
-            const res = await updateTask(taskId, { status });
-            setTask(res.data);
+            await updateTask(taskId, { status });
+            setTask((await getTask(taskId)).data);
             onTaskUpdated();
         } catch {
             setError("Failed to update status.");
@@ -310,13 +310,22 @@ export default function TaskDetailsModal({ isOpen, onClose, taskId, onTaskUpdate
                             </div>
                         </div>
 
+                        {canUpdateStatus && <form className="flex items-center gap-3" onSubmit={async e => {
+                            e.preventDefault();
+                            const progress = Number(new FormData(e.currentTarget).get("progress"));
+                            try { await updateTask(taskId, { progress }); setTask((await getTask(taskId)).data); onTaskUpdated(); }
+                            catch { setError("Failed to update progress."); }
+                        }}>
+                            <label>Progress (%) <input key={task?.progress} name="progress" type="number" min="0" max="100" required defaultValue={task?.progress || 0} className="w-20 rounded border border-[var(--border-color)] bg-[var(--surface-card)] p-2" /></label>
+                            <button className="rounded bg-[var(--accent)] px-3 py-2 text-[var(--accent-contrast)]">Save progress</button>
+                        </form>}
                         {/* Comments */}
                         <div>
                             <div className="flex items-center gap-2 font-semibold text-[var(--title-color)]">
                                 <FiMessageSquare />
                                 <h3>Discussion Comments</h3>
                             </div>
-                            <form onSubmit={handleAddComment} className="mt-3 flex gap-2">
+                            {canManageTask && <form onSubmit={handleAddComment} className="mt-3 flex gap-2">
                                 <input
                                     type="text"
                                     placeholder="Ask a question or post update..."
@@ -327,7 +336,7 @@ export default function TaskDetailsModal({ isOpen, onClose, taskId, onTaskUpdate
                                 <button type="submit" className="rounded-md bg-[var(--accent)] px-6 text-[var(--accent-contrast)] hover:bg-[var(--accent-hover)]">
                                     Comment
                                 </button>
-                            </form>
+                            </form>}
                             <div className="mt-6 space-y-4">
                                 {task?.comments?.map((com) => (
                                     <div key={com._id} className="rounded-md border p-4 bg-[var(--surface-muted)]/50">
@@ -335,9 +344,9 @@ export default function TaskDetailsModal({ isOpen, onClose, taskId, onTaskUpdate
                                             <span className="font-semibold text-[var(--title-color)]">{com.user?.fullName}</span>
                                             <div className="flex items-center gap-3">
                                                 <span>{new Date(com.createdAt).toLocaleString()}</span>
-                                                <button onClick={() => handleDeleteComment(com._id)} className="text-red-500 hover:text-red-700">
+                                                {canManageTask && <button onClick={() => handleDeleteComment(com._id)} className="text-red-500 hover:text-red-700">
                                                     Delete
-                                                </button>
+                                                </button>}
                                             </div>
                                         </div>
                                         <p className="mt-2 text-sm text-[var(--title-color)]">{com.text}</p>
@@ -368,7 +377,6 @@ export default function TaskDetailsModal({ isOpen, onClose, taskId, onTaskUpdate
         </div>
     );
 }
-
 
 
 

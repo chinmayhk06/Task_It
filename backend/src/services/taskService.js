@@ -9,8 +9,9 @@ const {
   requireTaskAccess,
 } = require('../utils/rbac');
 
-const TASK_MANAGERS = [ROLE.OWNER, ROLE.TEAM_LEAD];
-const INTERN_SAFE_FIELDS = new Set(['status']);
+const TASK_MANAGERS = [ROLE.ADMIN, ROLE.TEAM_LEAD];
+const MEMBER_SAFE_FIELDS = new Set(['status', 'progress']);
+const TASK_FIELDS = new Set(['title', 'description', 'priority', 'status', 'progress', 'deadline', 'project', 'assignee']);
 
 const forbidden = (message) => {
   const error = new Error(message);
@@ -30,7 +31,7 @@ const populateTask = async (task) => {
 const assertAssigneeInProjectTeam = async (projectId, assigneeId) => {
   if (!assigneeId) return;
 
-  const project = await Project.findById(projectId).populate('team', 'owner members');
+  const project = await Project.findById(projectId).populate('team', 'manager members');
   if (!project?.team) {
     throw new Error('Project team is required before assigning tasks');
   }
@@ -48,7 +49,7 @@ const createTask = async (taskData, userId) => {
   await requireProjectAccess(taskData.project, userId, TASK_MANAGERS);
   const assignee = taskData.assignee || taskData.assignedTo || null;
   await assertAssigneeInProjectTeam(taskData.project, assignee);
-  const data = { ...taskData };
+  const data = Object.fromEntries(Object.entries(taskData).filter(([key]) => TASK_FIELDS.has(key)));
   if (data.deadline === '') data.deadline = undefined;
 
   const task = await Task.create({
@@ -67,19 +68,17 @@ const getTasks = async (userId, filters = {}) => {
   if (filters.project) {
     const { role } = await requireProjectAccess(filters.project, userId);
     query.project = filters.project;
-    if (role === ROLE.INTERN) {
+    if (role === ROLE.MEMBER) {
       query.assignee = userId;
     } else if (TASK_MANAGERS.includes(role)) {
       canFilterAnyAssignee = true;
     }
   } else {
-    const { managerProjectIds, internProjectIds } = await getAccessibleProjectsByRole(userId);
+    const { managerProjectIds, memberProjectIds } = await getAccessibleProjectsByRole(userId);
     canFilterAnyAssignee = managerProjectIds.length > 0;
     query.$or = [
       { project: { $in: managerProjectIds } },
-      { project: { $in: internProjectIds }, assignee: userId },
-      { createdBy: userId, project: { $exists: false } },
-      { assignee: userId, project: { $exists: false } },
+      { project: { $in: memberProjectIds }, assignee: userId },
     ];
   }
 
@@ -124,14 +123,14 @@ const getTaskById = async (taskId, userId) => {
   };
 };
 
-const assertInternSafeUpdate = (task, userId, updateData) => {
+const assertMemberSafeUpdate = (task, userId, updateData) => {
   if (toId(task.assignee) !== toId(userId)) {
-    throw forbidden('Interns can only update tasks assigned to them');
+    throw forbidden('Members can only update tasks assigned to them');
   }
 
-  const unsafeFields = Object.keys(updateData).filter((field) => !INTERN_SAFE_FIELDS.has(field));
+  const unsafeFields = Object.keys(updateData).filter((field) => !MEMBER_SAFE_FIELDS.has(field));
   if (unsafeFields.length > 0) {
-    throw forbidden('Interns can only update safe task fields');
+    throw forbidden('Members can only update safe task fields');
   }
 };
 
@@ -139,19 +138,22 @@ const updateTask = async (taskId, userId, updateData) => {
   const { task, role } = await requireTaskAccess(taskId, userId);
 
   const data = { ...updateData };
+  if ('project' in data && !data.project) throw Object.assign(new Error('Task project is required'), { statusCode: 400 });
   if (data.assignedTo && !data.assignee) data.assignee = data.assignedTo;
   delete data.assignedTo;
   if (data.deadline === '') data.deadline = undefined;
 
-  if (role === ROLE.INTERN) {
-    assertInternSafeUpdate(task, userId, data);
+  if (role === ROLE.MEMBER) {
+    assertMemberSafeUpdate(task, userId, data);
   } else if (!TASK_MANAGERS.includes(role)) {
     throw forbidden('Insufficient task permissions');
   }
+  if (Object.keys(data).some((key) => !TASK_FIELDS.has(key))) throw forbidden('Cannot update protected task fields');
 
   const projectId = data.project || task.project?._id || task.project;
   if (data.project && data.project.toString() !== toId(task.project)) {
     await requireProjectAccess(data.project, userId, TASK_MANAGERS);
+    await assertAssigneeInProjectTeam(data.project, data.assignee === undefined ? toId(task.assignee) : data.assignee);
   }
 
   if (data.assignee === '' || data.assignee === null) {
@@ -182,8 +184,8 @@ const addSubtask = async (taskId, userId, subtaskTitle) => {
 
 const toggleSubtask = async (taskId, userId, subtaskId, isCompleted) => {
   const { task, role } = await requireTaskAccess(taskId, userId);
-  if (role === ROLE.INTERN && toId(task.assignee) !== toId(userId)) {
-    throw forbidden('Interns can only update their own assigned task');
+  if (role === ROLE.MEMBER && toId(task.assignee) !== toId(userId)) {
+    throw forbidden('Members can only update their own assigned task');
   }
 
   const subtask = task.subtasks.id(subtaskId);
@@ -202,14 +204,14 @@ const deleteSubtask = async (taskId, userId, subtaskId) => {
 };
 
 const addComment = async (taskId, userId, text) => {
-  const { task } = await requireTaskAccess(taskId, userId);
+  const { task } = await requireTaskAccess(taskId, userId, TASK_MANAGERS);
   task.comments.push({ user: userId, text });
   await task.save();
   return await task.populate('comments.user', 'fullName email');
 };
 
 const deleteComment = async (taskId, userId, commentId) => {
-  const { task, role } = await requireTaskAccess(taskId, userId);
+  const { task, role } = await requireTaskAccess(taskId, userId, TASK_MANAGERS);
   const comment = task.comments.id(commentId);
   if (!comment) throw new Error('Comment not found');
 

@@ -12,7 +12,7 @@ const authError = (message, statusCode = 400) => {
 
 // Register
 const registerUser = async (userData) => {
-    const { fullName, email, password, role } = userData;
+    const { fullName, email, password, role = "Member", jobTitle = "" } = userData;
 
     if (!SELF_REGISTRATION_ROLES.includes(role)) {
         throw authError("Invalid registration role", 400);
@@ -32,6 +32,7 @@ const registerUser = async (userData) => {
         email: email.toLowerCase().trim(),
         password: hashedPassword,
         role,
+        jobTitle,
     });
 
     return user;
@@ -88,7 +89,7 @@ const firebaseLogin = async (idToken) => {
                 fullName: name || email.split("@")[0],
                 email: email.toLowerCase().trim(),
                 password: undefined,
-                role: "Intern",
+                role: "Member",
                 profileImage: picture || "",
                 firebaseUid: uid,
                 verifiedEmail: email.toLowerCase().trim(),

@@ -51,7 +51,7 @@ const setProjectRepo = async (req, res) => {
         if (!githubRepo) {
             return res.status(400).json({ success: false, message: "githubRepo URL is required" });
         }
-        await requireProjectAccess(req.params.id, req.user._id, [ROLE.OWNER, ROLE.TEAM_LEAD]);
+        await requireProjectAccess(req.params.id, req.user._id, [ROLE.ADMIN, ROLE.TEAM_LEAD]);
         const project = await Project.findByIdAndUpdate(
             req.params.id,
             { githubRepo },

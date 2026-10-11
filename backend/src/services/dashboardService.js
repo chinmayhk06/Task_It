@@ -1,32 +1,25 @@
 const Task = require('../models/Task');
 const Team = require('../models/Team');
 const Project = require('../models/Project');
-const { getAccessibleProjectsByRole } = require('../utils/rbac');
+const { getAccessibleProjectsByRole, getAccessibleTeamIds } = require('../utils/rbac');
 
 const getDashboardStats = async (userId) => {
     // 1. Total Stats
-    const { managerProjectIds, internProjectIds } = await getAccessibleProjectsByRole(userId);
-    const accessibleProjectIds = [...managerProjectIds, ...internProjectIds];
+    const { managerProjectIds, memberProjectIds } = await getAccessibleProjectsByRole(userId);
+    const accessibleProjectIds = [...managerProjectIds, ...memberProjectIds];
     const projects = await Project.find({ _id: { $in: accessibleProjectIds } }).select('projectName status deadline');
     const totalProjects = projects.length;
     const activeProjects = projects.filter((project) => project.status !== 'Completed').length;
     
     // Find teams where user is owner or member
-    const teams = await Team.find({
-        $or: [
-            { owner: userId },
-            { "members.user": userId }
-        ]
-    });
+    const teams = await Team.find({ _id: { $in: await getAccessibleTeamIds(userId) } });
     const totalTeams = teams.length;
 
     // Fetch tasks where user is creator or assignee
     const tasks = await Task.find({
         $or: [
             { project: { $in: managerProjectIds } },
-            { project: { $in: internProjectIds }, assignee: userId },
-            { createdBy: userId, project: { $exists: false } },
-            { assignee: userId, project: { $exists: false } }
+            { project: { $in: memberProjectIds }, assignee: userId },
         ]
     }).populate('assignee', 'fullName profileImage')
       .populate('createdBy', 'fullName profileImage')

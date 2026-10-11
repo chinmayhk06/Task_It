@@ -3,6 +3,7 @@ const router = express.Router();
 const invitations = require("../controllers/invitationController");
 const { protect, requireGlobalRole } = require("../middleware/authMiddleware");
 const validate = require("../middleware/validationMiddleware");
+const { getAccountCapabilities } = require("../utils/rbac");
 const {
     registerUser,
     loginUser,
@@ -33,12 +34,12 @@ router.post("/google", firebaseLogin);
 router.post("/email-verification/send", protect, invitations.sendVerification);
 router.post("/email-verification/confirm", protect, invitations.verifyEmail);
 
-router.get("/users", protect, requireGlobalRole(["Super Admin"]), getUsers);
+router.get("/users", protect, requireGlobalRole(["Admin"]), getUsers);
 module.exports = router;
 
-router.get("/profile", protect, (req, res) => {
+router.get("/profile", protect, async (req, res) => {
     res.json({
         success: true,
-        user: req.user,
+        user: { ...req.user.toObject(), id: req.user.id, capabilities: await getAccountCapabilities(req.user) },
     });
 });

@@ -2,7 +2,7 @@ const express = require("express");
 
 const router = express.Router();
 
-const { protect } = require("../middleware/authMiddleware");
+const { protect, requireGlobalRole } = require("../middleware/authMiddleware");
 const invitations = require("../controllers/invitationController");
 router.post("/invitations/preview", protect, invitations.preview);
 router.post("/invitations/accept", protect, invitations.accept);
@@ -12,7 +12,7 @@ router.delete("/:id/invitations/:invitationId", protect, invitations.revoke);
 
 const {
   createTeam,
-  transferOwnership,
+  reassignManager,
   getMyTeams,
   getTeamById,
   updateTeam,
@@ -29,7 +29,7 @@ const {
 } = require("../validators/teamValidator");
 
 const validate = require("../middleware/validationMiddleware");
-router.post("/:id/transfer-ownership", protect, transferOwnership);
+router.post("/:id/manager", protect, requireGlobalRole(["Admin"]), reassignManager);
 
 router.post(
   "/",

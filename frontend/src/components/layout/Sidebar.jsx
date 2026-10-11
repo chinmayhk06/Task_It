@@ -11,7 +11,7 @@ import {
     FiSettings,
     FiGithub,
 } from "react-icons/fi";
-import { isSuperAdmin } from "../../utils/rbac";
+import { isAdmin, canViewReports } from "../../utils/rbac";
 
 const menu = [
     { id: "dashboard",  label: "Dashboard",  icon: FiGrid },
@@ -30,7 +30,7 @@ export default function Sidebar({ activePage, setActivePage, isOpen = false }) {
     const user = (() => {
         try { return JSON.parse(localStorage.getItem("user") || "{}"); } catch { return {}; }
     })();
-    const visibleMenu = menu.filter((item) => item.id !== "users" || isSuperAdmin(user));
+    const visibleMenu = menu.filter((item) => (item.id !== "users" || isAdmin(user)) && (item.id !== "reports" || canViewReports(user)));
 
     const handleLogout = () => {
         localStorage.removeItem("token");

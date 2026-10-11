@@ -79,7 +79,7 @@ export default function EditTeam() {
         );
     }
 
-    if (!allowed) return <div className="app-page">{error || "Only Owners and TeamLeads can edit this team."}</div>;
+    if (!allowed) return <div className="app-page">{error || "Only Admins and Team Leads can edit this team."}</div>;
     return (
         <div className="app-page">
             <div className="mx-auto max-w-2xl">

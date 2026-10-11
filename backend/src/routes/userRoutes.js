@@ -7,7 +7,7 @@ const {
 } = require("../controllers/userController");
 
 router.use(protect);
-router.use(requireGlobalRole(["Super Admin"]));
+router.use(requireGlobalRole(["Admin"]));
 
 router.route("/").get(getUsers).post(createUser);
 router.route("/:id").get(getUser).put(updateUser).delete(deleteUser);

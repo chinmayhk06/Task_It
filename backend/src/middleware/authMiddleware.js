@@ -1,5 +1,6 @@
 const jwt = require("jsonwebtoken");
 const User = require("../models/User");
+const { ACCOUNT_ROLES } = require("../utils/roles");
 
 const protect = async (req, res, next) => {
     try {
@@ -30,6 +31,10 @@ const protect = async (req, res, next) => {
                     success: false,
                     message: "This account is inactive.",
                 });
+            }
+
+            if (!ACCOUNT_ROLES.includes(req.user.role)) {
+                return res.status(409).json({ success: false, message: "Account requires the explicit RBAC migration" });
             }
 
             next();

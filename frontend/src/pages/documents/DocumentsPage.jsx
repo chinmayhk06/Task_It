@@ -7,7 +7,7 @@ import {
     getDocuments, uploadDocument, deleteDocument
 } from "../../services/documentService";
 import { getProjects } from "../../services/projectService";
-import { canManageProjects, getCurrentUserId, getId, getTeamRole } from "../../utils/rbac";
+import { canManageProjects, getCurrentUserId, getTeamRole } from "../../utils/rbac";
 import { useEffect } from "react";
 
 // Section
@@ -367,11 +367,9 @@ export default function DocumentsPage() {
     const [deleting, setDeleting] = useState(false);
     const currentUserId = getCurrentUserId();
     const manageableProjects = projects.filter((project) => {
-        if (!project.team && getId(project.owner) === currentUserId) return true;
         return canManageProjects(getTeamRole(project.team, currentUserId));
     });
     const canDeleteDocument = (doc) => {
-        if (getId(doc.uploadedBy) === currentUserId) return true;
         return canManageProjects(getTeamRole(doc.project?.team, currentUserId));
     };
 

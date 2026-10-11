@@ -57,7 +57,7 @@ export default function Invitation() {
           })}>Accept invitation</button>}
         </>}
         {invitation.status === "accepted" && invitation.emailMatches && <Link className={buttonClass} to={`/teams/${invitation.teamId}`}>Open team</Link>}
-        {["expired", "revoked"].includes(invitation.status) && <p>Ask an Owner or TeamLead for a new invitation.</p>}
+        {["expired", "revoked"].includes(invitation.status) && <p>Ask an Admin or Team Lead for a new invitation.</p>}
       </>}
       {message && <p role="status">{message}</p>}
       <Link className="block text-sm underline" to="/teams">Back to teams</Link>

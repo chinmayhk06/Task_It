@@ -1,6 +1,7 @@
 const { body } = require('express-validator');
 
 const createTaskValidator = [
+  body('progress').optional().isFloat({ min: 0, max: 100 }).withMessage('Progress must be between 0 and 100'),
   body('title')
     .notEmpty()
     .withMessage('Task title is required')
@@ -47,6 +48,7 @@ const createTaskValidator = [
 ];
 
 const updateTaskValidator = [
+  body('progress').optional().isFloat({ min: 0, max: 100 }).withMessage('Progress must be between 0 and 100'),
   body('title')
     .optional()
     .notEmpty()

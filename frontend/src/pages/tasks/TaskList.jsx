@@ -4,7 +4,7 @@ import { getTasks, createTask, updateTask, deleteTask } from "../../services/tas
 import { getProjects } from "../../services/projectService";
 import TaskFormModal from "../../components/tasks/TaskFormModal";
 import TaskDetailsModal from "../../components/tasks/TaskDetailsModal";
-import { canManageTasks, getCurrentUserId, getId, getTeamRole } from "../../utils/rbac";
+import { canManageTasks, getCurrentUserId, getTeamRole } from "../../utils/rbac";
 
 const getDeadlineLabel = (task) => {
     if (task.status === "Completed") return "Completed";
@@ -98,7 +98,6 @@ export default function TaskList() {
 
     const currentUserId = getCurrentUserId();
     const canCreateTask = projects.some((project) => {
-        if (!project.team && getId(project.owner) === currentUserId) return true;
         return canManageTasks(getTeamRole(project.team, currentUserId));
     });
     const canManageTask = (task) => {
@@ -107,8 +106,6 @@ export default function TaskList() {
             ? projects.find((item) => item._id === (taskProject?._id || task.project))
             : taskProject;
 
-        if (!project && getId(task.createdBy) === currentUserId) return true;
-        if (!project?.team && getId(project?.owner) === currentUserId) return true;
         return canManageTasks(getTeamRole(project?.team, currentUserId));
     };
     const assigneeOptions = Array.from(

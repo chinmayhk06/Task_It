@@ -13,16 +13,16 @@ export default function EmptyState({ onCreate }) {
             </h2>
 
             <p className="mt-2 max-w-sm text-[var(--subtitle-color)]">
-                Create your first team to start collaborating.
+                {onCreate ? "Create your first team to start collaborating." : "Teams you join will appear here."}
             </p>
 
-            <button
+            {onCreate && <button
                 onClick={onCreate}
                 className="mt-6 inline-flex items-center gap-2 rounded-md bg-[var(--accent)] px-5 py-3 text-[var(--accent-contrast)] hover:bg-[var(--accent-hover)]"
             >
                 <FiPlus />
                 New Team
-            </button>
+            </button>}
 
         </div>
     );

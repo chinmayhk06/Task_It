@@ -22,9 +22,7 @@ const projectSchema = new mongoose.Schema(
     team: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'Team',
-      required: function requireTeamForNewProject() {
-        return this.isNew;
-      },
+      required: true,
     },
 
     status: {
