@@ -40,11 +40,28 @@ const teamSchema = new mongoose.Schema(
     },
 
     members: [memberSchema],
+    invitations: {
+      type: [new mongoose.Schema({
+        email: { type: String, required: true, lowercase: true, trim: true },
+        role: { type: String, enum: ["TeamLead", "Intern"], required: true },
+        tokenHash: { type: String, required: true },
+        expiresAt: { type: Date, required: true },
+        sentAt: { type: Date, required: true },
+        status: { type: String, enum: ["pending", "accepted", "revoked"], default: "pending" },
+        acceptedBy: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
+        acceptedAt: Date,
+      })],
+      select: false,
+      default: [],
+    },
   },
   {
     timestamps: true,
+    optimisticConcurrency: true,
   }
 );
+
+teamSchema.index({ "invitations.tokenHash": 1 });
 
 teamSchema.pre("validate", function normalizeTeamRoles() {
   if (Array.isArray(this.members)) {

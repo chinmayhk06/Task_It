@@ -1,6 +1,5 @@
 const Team = require("../models/Team");
 const { validationResult } = require("express-validator");
-const User = require("../models/User");
 const Project = require("../models/Project");
 const { ROLE, normalizeRole, getTeamMembership } = require("../utils/rbac");
 const { createNotification } = require("../services/notificationService");
@@ -8,6 +7,7 @@ const { createNotification } = require("../services/notificationService");
 const TEAM_ROLES = [ROLE.OWNER, ROLE.TEAM_LEAD, ROLE.INTERN];
 
 const handleTeamError = (res, error) => {
+  if (error.name === "VersionError") return res.status(409).json({ success: false, message: "Team changed; refresh and retry" });
   if (error.name === "ValidationError" || error.name === "CastError") {
     return res.status(400).json({
       success: false,
@@ -34,6 +34,7 @@ const ensureValidation = (req, res) => {
 };
 
 const isOwner = (team, userId) => team.owner.toString() === userId.toString();
+const isManager = (team, userId) => [ROLE.OWNER, ROLE.TEAM_LEAD].includes(getTeamMembership(team, userId)?.role);
 
 const createTeam = async (req, res) => {
   try {
@@ -126,10 +127,10 @@ const updateTeam = async (req, res) => {
       });
     }
 
-    if (!isOwner(team, req.user._id)) {
+    if (!isManager(team, req.user._id)) {
       return res.status(403).json({
         success: false,
-        message: "Only the owner can update the team",
+        message: "Only Owners and TeamLeads can update the team",
       });
     }
 
@@ -139,13 +140,6 @@ const updateTeam = async (req, res) => {
     await team.save();
     await team.populate("owner", "fullName email");
     await team.populate("members.user", "fullName email");
-    await createNotification(
-      user._id,
-      "team_invite",
-      `You were added to the team "${team.teamName}".`,
-      team._id,
-      { path: `/teams/${team._id}` }
-    );
 
     res.status(200).json({
       success: true,
@@ -184,72 +178,12 @@ const deleteTeam = async (req, res) => {
       });
     }
 
-    await team.deleteOne();
+    const deleted = await Team.deleteOne({ _id: team._id, owner: req.user._id, __v: team.__v });
+    if (!deleted.deletedCount) return res.status(409).json({ success: false, message: "Team changed; refresh and retry" });
 
     res.status(200).json({
       success: true,
       message: "Team deleted successfully",
-    });
-  } catch (error) {
-    console.error(error);
-    return handleTeamError(res, error);
-  }
-};
-
-const inviteMember = async (req, res) => {
-  try {
-    if (!ensureValidation(req, res)) return;
-
-    const { email } = req.body;
-    const team = await Team.findById(req.params.id);
-
-    if (!team) {
-      return res.status(404).json({
-        success: false,
-        message: "Team not found",
-      });
-    }
-
-    if (!isOwner(team, req.user._id)) {
-      return res.status(403).json({
-        success: false,
-        message: "Only the owner can invite members",
-      });
-    }
-
-    const user = await User.findOne({ email: email.toLowerCase().trim() });
-
-    if (!user) {
-      return res.status(404).json({
-        success: false,
-        message: "User not found",
-      });
-    }
-
-    const alreadyMember = team.members.some(
-      (member) => member.user.toString() === user._id.toString()
-    );
-
-    if (alreadyMember) {
-      return res.status(400).json({
-        success: false,
-        message: "User is already a member",
-      });
-    }
-
-    team.members.push({
-      user: user._id,
-      role: ROLE.INTERN,
-    });
-
-    await team.save();
-    await team.populate("owner", "fullName email");
-    await team.populate("members.user", "fullName email");
-
-    res.status(200).json({
-      success: true,
-      message: "Member added successfully",
-      data: team,
     });
   } catch (error) {
     console.error(error);
@@ -268,10 +202,10 @@ const removeMember = async (req, res) => {
       });
     }
 
-    if (!isOwner(team, req.user._id)) {
+    if (!isManager(team, req.user._id)) {
       return res.status(403).json({
         success: false,
-        message: "Only the owner can remove members",
+        message: "Only Owners and TeamLeads can remove members",
       });
     }
 
@@ -340,10 +274,10 @@ const updateMemberRole = async (req, res) => {
 
     const requester = getTeamMembership(team, req.user._id);
 
-    if (!requester || requester.role !== ROLE.OWNER) {
+    if (!requester || ![ROLE.OWNER, ROLE.TEAM_LEAD].includes(requester.role)) {
       return res.status(403).json({
         success: false,
-        message: "Only the owner can change member roles",
+        message: "Only Owners and TeamLeads can change member roles",
       });
     }
 
@@ -443,12 +377,27 @@ const leaveTeam = async (req, res) => {
   }
 };
 
+const transferOwnership = async (req, res) => {
+  try {
+    const team = await Team.findById(req.params.id);
+    if (!team) return res.status(404).json({ success: false, message: "Team not found" });
+    if (!isOwner(team, req.user._id)) return res.status(403).json({ success: false, message: "Only the owner can transfer ownership" });
+    const target = team.members.find((m) => m.user.toString() === req.body.userId);
+    if (!target || req.body.userId === team.owner.toString()) return res.status(400).json({ success: false, message: "Choose another existing team member" });
+    team.members.forEach((m) => { if (m.role === ROLE.OWNER) m.role = ROLE.TEAM_LEAD; });
+    target.role = ROLE.OWNER;
+    team.owner = target.user;
+    await team.save();
+    res.json({ success: true, message: "Ownership transferred" });
+  } catch (error) { return handleTeamError(res, error); }
+};
+
 module.exports = {
+  transferOwnership,
   createTeam,
   getMyTeams,
   getTeamById,
   updateTeam,
-  inviteMember,
   removeMember,
   updateMemberRole,
   leaveTeam,

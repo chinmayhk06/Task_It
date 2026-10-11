@@ -143,10 +143,7 @@ const updateProject = async (projectId, userId, data) => {
 };
 
 const deleteProject = async (projectId, userId) => {
-  const { project, role } = await requireProjectAccess(projectId, userId, [ROLE.OWNER]);
-  if (role !== ROLE.OWNER) {
-    throw new Error('Only the team owner can delete projects');
-  }
+  const { project } = await requireProjectAccess(projectId, userId, PROJECT_MANAGERS);
 
   const taskCount = await Task.countDocuments({ project: project._id });
   if (taskCount > 0) {

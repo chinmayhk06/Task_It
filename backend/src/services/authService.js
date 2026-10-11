@@ -91,6 +91,7 @@ const firebaseLogin = async (idToken) => {
                 role: "Intern",
                 profileImage: picture || "",
                 firebaseUid: uid,
+                verifiedEmail: email.toLowerCase().trim(),
             });
         } else {
             if (user.isActive === false) {
@@ -98,6 +99,7 @@ const firebaseLogin = async (idToken) => {
             }
 
             user.firebaseUid = uid;
+            user.verifiedEmail = email.toLowerCase().trim();
 
             if (picture && !user.profileImage) {
                 user.profileImage = picture;

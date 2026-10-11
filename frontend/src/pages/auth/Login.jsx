@@ -7,9 +7,11 @@ import Input from "../../components/common/Input";
 import Button from "../../components/common/Button";
 import api from "../../services/api";
 import { signInWithGoogle } from "../../services/firebaseAuthService";
+import { invitationReturn, authLink } from "../../utils/authReturn";
 
 function Login() {
   const navigate = useNavigate();
+  const returnTo = invitationReturn();
 
   const [formData, setFormData] = useState({
     email: "",
@@ -73,7 +75,7 @@ function Login() {
         JSON.stringify(response.data.data)
       );
 
-      navigate("/dashboard");
+      navigate(returnTo || "/dashboard");
     } catch (error) {
       setSubmitError(
         error.response?.data?.message ||
@@ -102,7 +104,7 @@ function Login() {
             JSON.stringify(response.data.data)
         );
 
-        navigate("/dashboard");
+        navigate(returnTo || "/dashboard");
     } catch (error) {
         setSubmitError(
             error.response?.data?.message ||
@@ -235,7 +237,7 @@ function Login() {
           <p className="mt-8 text-center text-[var(--subtitle-color)]">
             Don't have an account?{" "}
             <Link
-              to="/register"
+              to={authLink("/register", returnTo)}
               className="font-semibold text-[var(--title-color)] hover:underline"
             >
               Create one

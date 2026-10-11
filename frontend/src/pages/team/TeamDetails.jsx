@@ -16,6 +16,7 @@ import {
     leaveTeam,
     removeMember,
     updateMemberRole,
+    getInvitations, resendInvitation, revokeInvitation, transferOwnership,
 } from "../../services/teamService";
 import {
     canDeleteTeam,
@@ -32,6 +33,9 @@ export default function TeamDetails() {
 
     const [team, setTeam] = useState(null);
     const [email, setEmail] = useState("");
+    const [inviteRole, setInviteRole] = useState("Intern");
+    const [invitations, setInvitations] = useState([]);
+    const [newOwner, setNewOwner] = useState("");
     const [loading, setLoading] = useState(true);
     const [actionLoading, setActionLoading] = useState(false);
     const [error, setError] = useState("");
@@ -49,6 +53,9 @@ export default function TeamDetails() {
             setError("");
             const response = await getTeam(id);
             setTeam(response.data);
+            if (canManageMembers(getTeamRole(response.data, getCurrentUserId()))) {
+                setInvitations((await getInvitations(id)).data);
+            } else { setInvitations([]); }
         } catch (err) {
             setError(
                 err.response?.data?.message ||
@@ -75,11 +82,12 @@ export default function TeamDetails() {
             setActionLoading(true);
             setError("");
             setSuccess("");
-            await inviteMember(id, email.trim());
+            await inviteMember(id, email.trim(), inviteRole);
             setEmail("");
-            setSuccess("Member added successfully.");
+            setSuccess("Invitation sent successfully.");
             await fetchTeam();
         } catch (err) {
+            await fetchTeam();
             setError(
                 err.response?.data?.message ||
                     "Failed to invite member."
@@ -87,6 +95,24 @@ export default function TeamDetails() {
         } finally {
             setActionLoading(false);
         }
+    };
+
+    const handleInvitation = async (invitationId, resend) => {
+        setActionLoading(true); setError(""); setSuccess("");
+        try {
+            await (resend ? resendInvitation : revokeInvitation)(id, invitationId);
+            await fetchTeam();
+            setSuccess(resend ? "Invitation resent." : "Invitation revoked.");
+        } catch (err) { setError(err.response?.data?.message || "Unable to update invitation."); }
+        finally { setActionLoading(false); }
+    };
+
+    const handleTransfer = async () => {
+        if (!newOwner || !confirm("Transfer ownership to this member? You will become a TeamLead.")) return;
+        setActionLoading(true); setError("");
+        try { await transferOwnership(id, newOwner); setNewOwner(""); await fetchTeam(); setSuccess("Ownership transferred."); }
+        catch (err) { setError(err.response?.data?.message || "Unable to transfer ownership."); }
+        finally { setActionLoading(false); }
     };
 
     const handleRemoveMember = async (userId) => {
@@ -226,7 +252,8 @@ export default function TeamDetails() {
                                     </button>
                                 )}
                             </>
-                        ) : (
+                        ) : null}
+                        {currentTeamRole !== "Owner" && (
                             <button
                                 onClick={handleLeaveTeam}
                                 disabled={actionLoading}
@@ -385,6 +412,11 @@ export default function TeamDetails() {
                                         Invite Member
                                     </label>
 
+                                    <label className="block">Team role
+                                        <select value={inviteRole} onChange={(e) => setInviteRole(e.target.value)} className="ml-2 rounded-md border border-[var(--border-color)] bg-[var(--surface-card)] p-2">
+                                            <option value="Intern">Intern</option><option value="TeamLead">TeamLead</option>
+                                        </select>
+                                    </label>
                                     <div className="flex gap-2">
                                         <input
                                             type="email"
@@ -408,6 +440,28 @@ export default function TeamDetails() {
                                 </form>
                             )}
 
+                            {canDeleteCurrentTeam && <section className="space-y-3">
+                                <label className="block">Transfer ownership
+                                    <select value={newOwner} onChange={(e) => setNewOwner(e.target.value)} className="mt-2 w-full rounded-md border border-[var(--border-color)] bg-[var(--surface-card)] p-2">
+                                        <option value="">Choose a member</option>
+                                        {team.members.filter((m) => (m.user?._id || m.user) !== (team.owner?._id || team.owner)).map((m) => <option key={m.user?._id || m.user} value={m.user?._id || m.user}>{m.user?.fullName || m.user?.email}</option>)}
+                                    </select>
+                                </label>
+                                <button disabled={actionLoading || !newOwner} className="underline disabled:opacity-50" onClick={handleTransfer}>Transfer ownership</button>
+                            </section>}
+                            {canManageTeamMembers && <section className="space-y-3">
+                                <h3 className="font-semibold">Pending invitations</h3>
+                                {invitations.length === 0 && <p className="text-sm">No pending invitations.</p>}
+                                {invitations.map((invitation) => <div key={invitation._id} className="rounded-md border border-[var(--border-color)] p-3 space-y-2">
+                                    <p className="break-all">{invitation.email}</p>
+                                    <p className="text-sm">{invitation.role} · {invitation.status}</p>
+                                    <p className="text-sm">Expires {new Date(invitation.expiresAt).toLocaleString()}</p>
+                                    <div className="flex gap-4">
+                                        <button disabled={actionLoading} className="underline disabled:opacity-50" onClick={() => handleInvitation(invitation._id, true)}>Resend</button>
+                                        <button disabled={actionLoading} className="underline disabled:opacity-50" onClick={() => handleInvitation(invitation._id, false)}>Revoke</button>
+                                    </div>
+                                </div>)}
+                            </section>}
                             {error && (
                                 <p className="text-sm text-red-500">
                                     {error}

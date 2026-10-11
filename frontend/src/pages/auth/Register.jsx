@@ -1,5 +1,6 @@
 ﻿import api from "../../services/api";
 import { useNavigate } from "react-router-dom";
+import { invitationReturn, authLink } from "../../utils/authReturn";
 
 import { useState } from "react";
 import { Link } from "react-router-dom";
@@ -10,6 +11,7 @@ import Input from "../../components/common/Input";
 import Button from "../../components/common/Button";
 
 function Register() {
+  const returnTo = invitationReturn();
 
   const [formData, setFormData] = useState({
     name: "",
@@ -95,7 +97,7 @@ function Register() {
 
         setSuccessMessage(response.data.message || "Account created successfully");
 
-        navigate("/login");
+        navigate(authLink("/login", returnTo));
 
     } catch (error) {
         setSubmitError(error.response?.data?.message || "Registration failed");
@@ -257,7 +259,7 @@ function Register() {
             Already have an account?{" "}
 
             <Link
-              to="/login"
+              to={authLink("/login", returnTo)}
               className="font-semibold text-[var(--title-color)] hover:underline"
             >
               Sign In

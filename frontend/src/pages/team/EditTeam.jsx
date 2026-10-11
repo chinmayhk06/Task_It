@@ -3,6 +3,7 @@ import { FiArrowLeft } from "react-icons/fi";
 import { Link, useNavigate, useParams } from "react-router-dom";
 
 import { getTeam, updateTeam } from "../../services/teamService";
+import { canEditTeam, getTeamRole, getCurrentUserId } from "../../utils/rbac";
 
 export default function EditTeam() {
     const { id } = useParams();
@@ -13,6 +14,7 @@ export default function EditTeam() {
         description: "",
     });
     const [loading, setLoading] = useState(true);
+    const [allowed, setAllowed] = useState(false);
     const [saving, setSaving] = useState(false);
     const [error, setError] = useState("");
 
@@ -20,6 +22,7 @@ export default function EditTeam() {
         const fetchTeam = async () => {
             try {
                 const response = await getTeam(id);
+                setAllowed(canEditTeam(getTeamRole(response.data, getCurrentUserId())));
                 setFormData({
                     teamName: response.data.teamName || "",
                     description: response.data.description || "",
@@ -47,6 +50,7 @@ export default function EditTeam() {
 
     const handleSubmit = async (e) => {
         e.preventDefault();
+        if (!allowed) return;
 
         if (!formData.teamName.trim()) {
             setError("Team name is required");
@@ -75,6 +79,7 @@ export default function EditTeam() {
         );
     }
 
+    if (!allowed) return <div className="app-page">{error || "Only Owners and TeamLeads can edit this team."}</div>;
     return (
         <div className="app-page">
             <div className="mx-auto max-w-2xl">

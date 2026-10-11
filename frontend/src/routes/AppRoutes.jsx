@@ -7,6 +7,7 @@ import AppShell from "../components/layout/AppShell";
 import TeamList from "../pages/team/TeamList";
 import CreateTeam from "../pages/team/CreateTeam";
 import TeamDetails from "../pages/team/TeamDetails";
+import Invitation from "../pages/team/Invitation";
 import EditTeam from "../pages/team/EditTeam";
 
 import ProjectsPage from "../pages/projects/ProjectsPage";
@@ -50,6 +51,7 @@ function AppRoutes() {
             <Route path="/" element={<Login />} />
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
+            <Route path="/invitations/:token" element={<Invitation />} />
 
             {/* Dashboard */}
             <Route path="/dashboard" element={<ProtectedRoute><AppShell activePage="dashboard"><Dashboard /></AppShell></ProtectedRoute>} />

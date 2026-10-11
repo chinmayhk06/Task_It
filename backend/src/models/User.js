@@ -16,6 +16,11 @@ const userSchema = new mongoose.Schema(
       trim: true,
     },
 
+    verifiedEmail: { type: String, default: "" },
+    emailVerification: {
+      type: new mongoose.Schema({ hash: String, email: String, expiresAt: Date, sentAt: Date }, { _id: false }),
+      select: false,
+    },
     password: {
       type: String,
       required: false,

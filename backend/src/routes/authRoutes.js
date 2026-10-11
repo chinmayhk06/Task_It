@@ -1,5 +1,6 @@
 const express = require("express");
 const router = express.Router();
+const invitations = require("../controllers/invitationController");
 const { protect, requireGlobalRole } = require("../middleware/authMiddleware");
 const validate = require("../middleware/validationMiddleware");
 const {
@@ -29,6 +30,8 @@ router.post(
 );
 
 router.post("/google", firebaseLogin);
+router.post("/email-verification/send", protect, invitations.sendVerification);
+router.post("/email-verification/confirm", protect, invitations.verifyEmail);
 
 router.get("/users", protect, requireGlobalRole(["Super Admin"]), getUsers);
 module.exports = router;

@@ -40,11 +40,11 @@ export const canManageProjects = (role) =>
 
 export const canManageTasks = canManageProjects;
 
-export const canDeleteProject = (role) => role === TEAM_ROLES.OWNER;
+export const canDeleteProject = canManageProjects;
 
-export const canEditTeam = (role) => role === TEAM_ROLES.OWNER;
+export const canEditTeam = canManageProjects;
 
-export const canDeleteTeam = canEditTeam;
+export const canDeleteTeam = (role) => role === TEAM_ROLES.OWNER;
 
 export const canManageMembers = canEditTeam;
 

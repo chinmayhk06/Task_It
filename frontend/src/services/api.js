@@ -30,7 +30,9 @@ api.interceptors.response.use(
             localStorage.removeItem("user");
 
             if (!window.location.pathname.includes("/login")) {
-                window.location.href = "/login";
+                const path = window.location.pathname;
+                window.location.href = /^\/invitations\/[a-f0-9]{64}$/.test(path)
+                    ? `/login?returnTo=${encodeURIComponent(path)}` : "/login";
             }
         }
 

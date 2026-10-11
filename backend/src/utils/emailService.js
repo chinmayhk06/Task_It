@@ -22,10 +22,11 @@ const getTransporter = () => {
   return transporter;
 };
 
-const sendEmail = async ({ to, subject, html, text }) => {
+const sendEmail = async ({ to, subject, html, text, required = false }) => {
   const mailer = getTransporter();
 
   if (!mailer) {
+    if (required) throw new Error('SMTP is not configured');
     console.log(`[EmailService] Skipping email because SMTP is not configured. To: ${to} | Subject: ${subject}`);
     return;
   }
@@ -41,6 +42,7 @@ const sendEmail = async ({ to, subject, html, text }) => {
 
     console.log(`[EmailService] Email sent to ${to}`);
   } catch (err) {
+    if (required) throw err;
     console.error(`[EmailService] Failed to send email: ${err.message}`);
   }
 };
